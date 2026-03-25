@@ -1,0 +1,14 @@
+# Customer-specific context (contains environment details)
+shared/customer-context.json
+
+# API keys / secrets
+*.key
+.env
+
+# Build artifacts
+dist/
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
