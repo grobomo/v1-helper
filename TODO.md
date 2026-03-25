@@ -1,5 +1,22 @@
 # v1-helper TODO
 
+## Phase 0: Blueprint Stability — PARTIALLY DONE
+- [x] Relay auto-reconnect with exponential backoff (relayClient.js)
+- [x] Keepalive ping on both relay client and primary server side
+- [x] Command retry in RelayTransport (3 retries with reconnect wait)
+- [x] Relay-first as default mode in statefulBackend.js
+- [ ] V1 session expires during automation (incognito lab) — need non-incognito session for stable testing
+- [ ] Screenshot operation detaches extension on heavy V1 pages — investigate Chrome extension service worker lifecycle
+- [ ] Test relay stability across two concurrent Claude sessions
+
+## Phase 0.5: Overlay Injection — PROVEN
+- [x] Successfully injected 20 "AI" badges next to CVE IDs in V1 iframe DOM
+- [x] Confirmed V1 CVE data lives in iframe[0].contentDocument (same origin, accessible)
+- [x] JS injection via browser_evaluate works for reading AND writing V1 DOM
+- [ ] Add real analysis text to badges (not just "AI" placeholder)
+- [ ] Add click handler for full analysis popup
+- [ ] Handle V1 SPA navigation (re-inject when page changes)
+
 ## Phase 1: Blueprint Extra MCP — Add Generic Tracking
 These go into Blueprint Extra, not v1-helper. Reusable across all projects.
 - [ ] `browser_track_interactions` tool — start/stop click+keypress recording
