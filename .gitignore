@@ -1,5 +1,8 @@
-# Customer-specific context (contains environment details)
+# Customer-specific data (contains environment details, vuln data, customer names)
 shared/customer-context.json
+customer-context.md
+reports/
+v1-data-cache.json
 
 # API keys / secrets
 *.key
