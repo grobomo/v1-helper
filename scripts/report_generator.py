@@ -1222,8 +1222,8 @@ async function saveEnv(){{
     if(window.showSaveFilePicker){{
       const handle=await window.showSaveFilePicker({{suggestedName:'customer-context.md',types:[{{description:'Markdown',accept:{{'text/markdown':['.md']}}}}]}});
       const w=await handle.createWritable();await w.write(content);await w.close();
-      status.textContent='Saved! Re-run report generator to update analysis.';status.style.color='#155724';
-      status.textContent+=' (Browser will remember this folder for next time)';
+      status.textContent='Saved!';status.style.color='#155724';
+      setTimeout(()=>{{status.textContent='Re-run report generator to update analysis.';}},1500);
     }}else{{
       const blob=new Blob([content],{{type:'text/markdown'}});
       const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='customer-context.md';a.click();
