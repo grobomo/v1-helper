@@ -1,6 +1,7 @@
 # Customer-specific data (contains environment details, vuln data, customer names)
 shared/customer-context.json
 customer-context.md
+customers/
 reports/
 v1-data-cache.json
 
