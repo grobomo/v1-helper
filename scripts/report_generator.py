@@ -522,6 +522,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 <td>{e.get("action","?")}</td>
 <td>{"; ".join(resources) or "-"}</td>
 <td>{e.get("policyName","?")}</td>
+<td style="text-align:center"><a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/server-cloud/container-inventory" target="_blank" style="text-decoration:none;background:#0066cc;color:#fff;white-space:nowrap">Open in V1</a></td>
 </tr>"""
 
         # Build analysis row with event-specific context and XDR query
@@ -607,7 +608,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 
         if analysis_html:
             rows += f"""<tr class="analysis-row">
-<td colspan="9"><div class="analysis-detail">{analysis_html}</div></td>
+<td colspan="10"><div class="analysis-detail">{analysis_html}</div></td>
 </tr>"""
 
     for e in sensor_events:
@@ -627,7 +628,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
         copy_id += 1
         sensor_query = f'productName:"Trend Vision One - Container Security" AND eventType:runtime AND ruleName:"{e.get("ruleName","")}" AND clusterName:"{cluster}"'
         rows += f"""<tr class="analysis-row">
-<td colspan="9"><div class="analysis-detail">
+<td colspan="10"><div class="analysis-detail">
 <strong>Runtime sensor detection.</strong> Investigate the process and context that triggered this rule.
 <div class="xdr-query-box">
 <span class="xdr-label">XDR Query:</span>
@@ -638,7 +639,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 </tr>"""
 
     return f"""<table>
-<tr><th>Time</th><th>Cluster</th><th>Namespace</th><th>Kind</th><th>Violation</th><th>Decision</th><th>Action</th><th>Details</th><th>Policy</th></tr>
+<tr><th>Time</th><th>Cluster</th><th>Namespace</th><th>Kind</th><th>Violation</th><th>Decision</th><th>Action</th><th>Details</th><th>Policy</th><th></th></tr>
 {rows}
 </table>"""
 
@@ -821,6 +822,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <td><code>{f["resourceName"]}</code></td>
 <td>{f.get("containerName","-")}</td>
 <td>{f["repository"]}</td>
+<td style="text-align:center"><a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/sase" target="_blank" style="text-decoration:none;background:#0066cc;color:#fff;white-space:nowrap">Open in V1</a></td>
 </tr>"""
 
         # Full-width analysis row under CVE
@@ -835,7 +837,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
             owner = analysis.get("owner", "")
 
             rows_html += f"""<tr class="analysis-row">
-<td colspan="9">
+<td colspan="10">
   <div class="analysis-detail">
     <span class="tag" style="background:{rel_bg};color:{rel_fg}">Relevant: {relevant.upper()}</span>
     <span class="owner-tag">{owner}</span>
@@ -1118,7 +1120,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 </div>
 <p><em>Each CVE has an analysis row below it explaining relevance to your <strong>{env_label}</strong> environment.</em></p>
 <table>
-  <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th></tr>
+  <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th><th></th></tr>
 {rows_html}
 </table>
   </div>
