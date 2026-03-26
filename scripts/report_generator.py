@@ -950,7 +950,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   h1 {{ border-bottom: 3px solid #e94560; padding-bottom: 10px; }}
   h2 {{ color: var(--heading); margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 5px; scroll-margin-top: 50px; }}
   h3 {{ color: var(--heading2); margin-top: 20px; }}
-  table {{ border-collapse: collapse; width: 100%; margin: 12px 0; }}
+  table {{ border-collapse: separate; border-spacing: 0; width: 100%; margin: 12px 0; }}
   th, td {{ border: 1px solid var(--border); padding: 8px 12px; text-align: left; font-size: 0.9em; }}
   th {{ background: var(--th-bg); color: var(--th-fg); position: sticky; top: 41px; z-index: 10; border-color: var(--th-bg); box-shadow: 0 -10px 0 var(--th-bg), 0 1px 0 var(--border); }}
   tr:nth-child(even):not(.analysis-row) {{ background: var(--even-row); }}
