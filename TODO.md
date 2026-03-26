@@ -1,55 +1,62 @@
 # v1-helper TODO
 
-## Phase 0: Blueprint Stability — PARTIALLY DONE
-- [x] Relay auto-reconnect with exponential backoff (relayClient.js)
-- [x] Keepalive ping on both relay client and primary server side
-- [x] Command retry in RelayTransport (3 retries with reconnect wait)
-- [x] Relay-first as default mode in statefulBackend.js
-- [ ] V1 session expires during automation (incognito lab) — need non-incognito session for stable testing
-- [ ] Screenshot operation detaches extension on heavy V1 pages — investigate Chrome extension service worker lifecycle
-- [ ] Test relay stability across two concurrent Claude sessions
+## v1.0 DONE
+- [x] Report generator with Claude-powered CVE analysis
+- [x] V1 API integration (clusters, vulns, image occurrences, eval/sensor events)
+- [x] Per-CVE environment-aware analysis (kernel vs userspace, EKS/ECS context)
+- [x] Sorted by relevance (YES/LOW/NO), grouped by image + K8s location
+- [x] Runtime event analysis with MITRE ATT&CK references per command
+- [x] XDR queries with copy-to-clipboard for each event
+- [x] Collapsible sections with expand bar + auto-scroll
+- [x] Dark/light mode, sticky toolbar, font controls, CSV/PDF export
+- [x] Cluster overview with protection modules, node topology, troubleshooting
+- [x] V1 API reference section with curl examples
+- [x] Secret scan CI workflow
 
-## Phase 0.5: Overlay Injection — PROVEN
-- [x] Successfully injected 20 "AI" badges next to CVE IDs in V1 iframe DOM
-- [x] Confirmed V1 CVE data lives in iframe[0].contentDocument (same origin, accessible)
-- [x] JS injection via browser_evaluate works for reading AND writing V1 DOM
-- [ ] Add real analysis text to badges (not just "AI" placeholder)
-- [ ] Add click handler for full analysis popup
-- [ ] Handle V1 SPA navigation (re-inject when page changes)
+## v1.1: Lab Infrastructure
+- [ ] Spin up dedicated EC2 spot instance (Debian) with microk8s for persistent test lab
+- [ ] Install V1 Container Security helm chart on new cluster
+- [ ] Register cluster in V1 console (connect to Trend first)
+- [ ] Re-spin PX_lab cluster (auto-shutdown after 4h, need Blueprint to recreate)
+- [ ] Add SSH security group rule for lab access
+- [ ] Script to auto-provision lab: EC2 + microk8s + helm + V1 registration
 
-## Phase 1: Blueprint Extra MCP — Add Generic Tracking
-These go into Blueprint Extra, not v1-helper. Reusable across all projects.
-- [ ] `browser_track_interactions` tool — start/stop click+keypress recording
-  - DOM path capture per event
-  - Element attributes (tag, id, classes, text, aria, data-*)
-  - Screenshot on each click (captureVisibleTab)
-  - Network requests triggered within 2s window
-  - Store in extension IndexedDB with daily rotation
-- [ ] `browser_get_interactions` tool — retrieve recorded interactions
-- [ ] `browser_inject_overlay` tool — insert HTML at specific DOM location, persist across SPA nav
-- [ ] `browser_click_sequence` tool — multi-step click+wait automation
+## v1.1: Test Event Generation
+- [ ] Continuous test event runner script (run in background on lab cluster)
+- [ ] Varied attack simulations for runtime telemetry:
+  - User creation / credential harvesting (useradd, /etc/shadow)
+  - Package manager in runtime (apt, pip install)
+  - Outbound C2 callbacks (curl to external domains)
+  - Reverse shell attempts (bash -i, nc listeners)
+  - Container escape attempts (mount /proc, access host PID)
+  - Cryptominer behavior (CPU-intensive process, mining pool connections)
+  - Supply chain: pull unscanned image, deploy pod with malicious entrypoint
+  - Lateral movement: curl to internal service IPs, K8s API discovery
+  - Secret extraction: env var dump, mounted secret volume reads
+  - AI-enabled attack vectors: LLM-generated payloads, prompt injection via env vars
+- [ ] Run events continuously so XDR data lake has telemetry to query
+- [ ] Cache raw V1 data after each run for historical comparison
 
-## Phase 2: V1 Reader (v1_reader.py)
-- [ ] Detect current V1 page from URL hash via Blueprint snapshot
-- [ ] Scrape vulnerability table rows via browser_evaluate
-- [ ] Scrape container inventory tree
-- [ ] Scrape code security CI/CD artifacts
-- [ ] Pull enrichment data from V1 API (image occurrences, cluster details)
+## v1.1: XDR Data Pipeline Integration
+- [ ] Understand two data paths: admission controller (eval logs) vs runtime telemetry (XDR search)
+- [ ] Wait for runtime sensor telemetry to index in XDR (15-60 min after events)
+- [ ] Add XDR container activity results to report (table under each event)
+- [ ] Claude analysis of XDR search results (not just eval events)
+- [ ] Include raw API queries with placeholder key for customer self-service
+- [ ] Historical data: save raw V1 data per run, compare across reports
 
-## Phase 3: Analysis + Overlay (v1_overlay.py)
-- [ ] Claude analyzes each finding with customer context (this session does analysis)
-- [ ] Inject analysis tooltips next to CVE rows in V1 DOM via browser_evaluate
-- [ ] Expandable reasoning on hover/click
-- [ ] customer-context.md for per-customer notes
+## v1.2: Report Enhancements
+- [ ] Direct PDF export (without browser print dialog) — use jsPDF or html2pdf.js
+- [ ] Kubernetes labels in image grouping (need labels from V1 API or kubectl)
+- [ ] Claude analysis of XDR query results with insights/next steps
+- [ ] Historic trend analysis: compare current vs past reports
+- [ ] Auto-troubleshoot unexpected V1 values (UNKNOWN protection, missing data)
+- [ ] Debian base image support for lab (user preference)
 
-## Phase 4: V1 Action Automation (v1_actions.py)
-- [ ] Dismiss CVE — browser_click_sequence: checkbox > status dropdown > dismiss > confirm
-- [ ] Accept CVE — same flow with accept
-- [ ] Remediate — same flow
-- [ ] Bulk actions
-- [ ] Report HTML with buttons that trigger automation via Blueprint MCP
-
-## Phase 5: Report Generator (report_generator.py)
-- [ ] Move generate-report.py from recording-analyzer to v1-helper
-- [ ] HTML report with V1 action buttons that call Blueprint MCP
-- [ ] Customer context integration
+## Future: Blueprint Browser Automation
+- [ ] Blueprint Extra MCP: browser_track_interactions (click/keypress recording)
+- [ ] Blueprint Extra MCP: browser_inject_overlay (persistent HTML in V1 DOM)
+- [ ] Blueprint Extra MCP: browser_click_sequence (multi-step V1 actions)
+- [ ] V1 overlay injection: analysis badges next to CVE rows in V1 console
+- [ ] V1 action automation: dismiss/accept/remediate via Blueprint click sequences
+- [ ] V1 SPA navigation handling (re-inject on page change)
