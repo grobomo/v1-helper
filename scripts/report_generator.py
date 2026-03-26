@@ -942,7 +942,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .section.collapsed .section-bar .expand-label {{ opacity: 1; }}
   .section-body {{ flex: 1; min-width: 0; overflow: hidden; transition: max-height 0.3s ease, opacity 0.2s ease; }}
   .section.collapsed .section-body {{ max-height: 0 !important; opacity: 0; padding: 0; }}
-  .section:not(.collapsed) .section-body {{ opacity: 1; }}
+  .section:not(.collapsed) .section-body {{ opacity: 1; overflow: visible; }}
   /* Theme toggle */
   .theme-toggle {{ display: flex; align-items: center; gap: 6px; }}
   .theme-toggle label {{ position: relative; width: 36px; height: 20px; cursor: pointer; }}
