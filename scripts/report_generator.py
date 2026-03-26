@@ -866,7 +866,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   h3 {{ color: var(--heading2); margin-top: 20px; }}
   table {{ border-collapse: collapse; width: 100%; margin: 12px 0; }}
   th, td {{ border: 1px solid var(--border); padding: 8px 12px; text-align: left; font-size: 0.9em; }}
-  th {{ background: var(--th-bg); color: var(--th-fg); position: sticky; top: 42px; z-index: 10; }}
+  th {{ background: var(--th-bg); color: var(--th-fg); position: sticky; top: 42px; z-index: 10; box-shadow: 0 1px 0 var(--border), inset 0 -1px 0 var(--border); }}
   tr:nth-child(even):not(.analysis-row) {{ background: var(--even-row); }}
   code {{ background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.85em; color: var(--fg); }}
   a {{ color: var(--link); }}
@@ -903,9 +903,9 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .crit-pkg {{ font-weight: 700; font-size: 0.85em; min-width: 70px; }}
   .crit-title {{ font-size: 0.85em; color: var(--reasoning); }}
   /* Target highlight when jumping from critical findings */
-  /* Target highlight — flash row background yellow */
-  @keyframes target-flash {{ 0%,15% {{ background: rgba(240,192,64,0.3); }} 100% {{ background: transparent; }} }}
-  tr.flash-target td, tr.flash-target + tr.analysis-row td {{ animation: target-flash 2s ease forwards; }}
+  /* Target highlight — flash row background yellow then revert */
+  @keyframes target-flash {{ 0%,20% {{ background: rgba(240,192,64,0.25); }} 100% {{ background: inherit; }} }}
+  tr.flash-target td, tr.flash-target + tr.analysis-row td {{ animation: target-flash 2s ease; }}
   /* Subtle border around each CVE/event row pair for visual separation */
   tr[id^="cve-"] td, tr[id^="evt-"] td {{ border-top: 2px solid var(--border); }}
   tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ border-left: 2px solid var(--border); }}
