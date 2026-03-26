@@ -60,12 +60,17 @@ class V1:
             url, params = nxt, None
         return items
 
+    # Kubernetes
     def clusters(self): return self._pages("/v3.0/containerSecurity/kubernetesClusters")
     def vulns(self): return self._pages("/v3.0/containerSecurity/vulnerabilities", {"limit": 200})
     def image_occ(self): return self._pages("/v3.0/containerSecurity/kubernetesImageOccurrences")
     def eval_events(self): return self._pages("/v3.0/containerSecurity/kubernetesEvaluationEventLogs")
     def sensor_events(self): return self._pages("/v3.0/containerSecurity/kubernetesSensorEventLogs")
     def audit_events(self): return self._pages("/v3.0/containerSecurity/kubernetesAuditEventLogs")
+    # Amazon ECS
+    def ecs_clusters(self): return self._pages("/v3.0/containerSecurity/amazonEcsClusters")
+    def ecs_image_occ(self): return self._pages("/v3.0/containerSecurity/amazonEcsImageOccurrences")
+    def ecs_sensor_events(self): return self._pages("/v3.0/containerSecurity/amazonEcsSensorEventLogs")
 
     def xdr_container_search(self, query, top=50):
         """Search container activity data via XDR search API."""
@@ -155,16 +160,19 @@ def generate_customer_context(clusters, vulns, occurrences):
     # Detect platform from orchestrator + node names + cluster names
     orch_str = ", ".join(orchestrators)
     is_eks = "eks" in orch_str.lower() or any("eks" in c.lower() for c in cluster_names)
+    is_ecs = "ecs" in orch_str.lower() or any("ecs" in c.lower() for c in cluster_names)
     is_gke = "gke" in orch_str.lower() or any("gke" in c.lower() for c in cluster_names)
     is_aks = "aks" in orch_str.lower() or any("aks" in c.lower() for c in cluster_names)
-    is_aws = is_eks or any(".compute.internal" in n for n in node_names) or any("ecr" in v.get("registry","") for v in vulns)
-    managed = is_eks or is_gke or is_aks
+    is_aws = is_eks or is_ecs or any(".compute.internal" in n for n in node_names) or any("ecr" in v.get("registry","") for v in vulns)
+    managed = is_eks or is_ecs or is_gke or is_aks
 
-    if is_eks: platform = "Amazon EKS (managed Kubernetes on AWS)"
-    elif is_gke: platform = "Google GKE (managed Kubernetes on GCP)"
-    elif is_aks: platform = "Azure AKS (managed Kubernetes on Azure)"
-    elif managed: platform = f"{orch_str} (managed)"
-    else: platform = f"{orch_str}"
+    platforms = []
+    if is_eks: platforms.append("Amazon EKS")
+    if is_ecs: platforms.append("Amazon ECS")
+    if is_gke: platforms.append("Google GKE")
+    if is_aks: platforms.append("Azure AKS")
+    if not platforms: platforms.append(orch_str)
+    platform = " + ".join(platforms) + (" (managed Kubernetes on AWS)" if is_aws else " (managed)" if managed else "")
 
     host_kernel = "Amazon Linux 2/2023 (managed by AWS)" if is_aws else "managed by cloud provider" if managed else "managed by customer"
 
@@ -1440,11 +1448,22 @@ def main():
     else:
         print("Pulling V1 data...")
         api = V1(region, api_key_name)
+        # Kubernetes
         clusters = api.clusters()
         vulns = api.vulns()
         occurrences = api.image_occ()
         eval_events = api.eval_events()
         sensor_events = api.sensor_events()
+        # Amazon ECS
+        ecs_clusters = api.ecs_clusters()
+        ecs_occurrences = api.ecs_image_occ()
+        ecs_sensor = api.ecs_sensor_events()
+        # Merge ECS into main lists (tag ECS clusters with orchestrator)
+        for c in ecs_clusters:
+            c.setdefault("orchestrator", "Amazon ECS")
+        clusters.extend(ecs_clusters)
+        occurrences.extend(ecs_occurrences)
+        sensor_events.extend(ecs_sensor)
         # Cache per customer
         cache_path = REPORTS_DIR / f"{args.customer}-raw-data.json"
         json.dump({"clusters": clusters, "vulns": vulns, "occurrences": occurrences,
