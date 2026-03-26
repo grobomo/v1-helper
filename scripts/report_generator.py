@@ -1080,8 +1080,14 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <div class="section-body">
 <div class="status-box">
   <p>Analysis assumptions based on <code>customer-context.md</code>. <strong>Review and correct if inaccurate.</strong></p>
-  <pre class="raw-json" style="max-height:300px">{html_mod.escape(customer_context)}</pre>
-  <p class="meta" style="margin-top:8px;border:none">Edit <code>reports/customer-context.md</code> and re-run to update analysis for a different environment.</p>
+  <pre class="raw-json" id="env-display" style="max-height:300px">{html_mod.escape(customer_context)}</pre>
+  <textarea id="env-editor" style="display:none;width:100%;min-height:300px;font-family:'Cascadia Code','Fira Code',monospace;font-size:0.85em;background:var(--code-bg);color:var(--fg);border:2px solid var(--heading);border-radius:6px;padding:10px;resize:vertical">{html_mod.escape(customer_context)}</textarea>
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+    <button class="export-btn" id="env-edit-btn" onclick="startEditEnv()">Edit</button>
+    <button class="export-btn" id="env-save-btn" style="display:none;background:var(--heading);color:var(--th-fg)" onclick="saveEnv()">Save to disk</button>
+    <button class="export-btn" id="env-cancel-btn" style="display:none" onclick="cancelEditEnv()">Cancel</button>
+    <span class="meta" style="border:none;margin:0" id="env-status"></span>
+  </div>
 </div>
   </div>
 </div>
@@ -1182,6 +1188,43 @@ function flashTarget(){{
 }}
 window.addEventListener('hashchange',flashTarget);
 if(location.hash)setTimeout(flashTarget,400);
+// Environment context inline editor
+function startEditEnv(){{
+  document.getElementById('env-display').style.display='none';
+  document.getElementById('env-editor').style.display='block';
+  document.getElementById('env-edit-btn').style.display='none';
+  document.getElementById('env-save-btn').style.display='inline-block';
+  document.getElementById('env-cancel-btn').style.display='inline-block';
+  document.getElementById('env-status').textContent='';
+}}
+function cancelEditEnv(){{
+  document.getElementById('env-display').style.display='block';
+  document.getElementById('env-editor').style.display='none';
+  document.getElementById('env-edit-btn').style.display='inline-block';
+  document.getElementById('env-save-btn').style.display='none';
+  document.getElementById('env-cancel-btn').style.display='none';
+  document.getElementById('env-editor').value=document.getElementById('env-display').textContent;
+  document.getElementById('env-status').textContent='';
+}}
+async function saveEnv(){{
+  const content=document.getElementById('env-editor').value;
+  const status=document.getElementById('env-status');
+  try{{
+    if(window.showSaveFilePicker){{
+      const handle=await window.showSaveFilePicker({{suggestedName:'customer-context.md',types:[{{description:'Markdown',accept:{{'text/markdown':['.md']}}}}]}});
+      const w=await handle.createWritable();await w.write(content);await w.close();
+      status.textContent='Saved! Re-run report generator to update analysis.';status.style.color='#155724';
+    }}else{{
+      const blob=new Blob([content],{{type:'text/markdown'}});
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='customer-context.md';a.click();
+      status.textContent='Downloaded. Move to reports/customer-context.md and re-run.';status.style.color='var(--meta)';
+    }}
+    document.getElementById('env-display').textContent=content;
+    cancelEditEnv();
+  }}catch(e){{
+    if(e.name!=='AbortError'){{status.textContent='Error: '+e.message;status.style.color='#721c24';}}
+  }}
+}}
 // CSV export
 function exportCSV(){{
   const NL='\\n';
