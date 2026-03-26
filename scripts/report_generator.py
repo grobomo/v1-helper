@@ -15,6 +15,7 @@ Usage:
 import os
 import sys
 import json
+import html as html_mod
 import datetime
 import requests
 from pathlib import Path
@@ -316,18 +317,21 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
         if "useradd" in cmd or "adduser" in cmd:
             user = cmd.split()[-1] if cmd.split() else "unknown"
             return {
+                "severity": "high", "relevant": "yes",
                 "title": f"User creation detected: <code>{cmd}</code>",
                 "analysis": f"A new user account <code>{user}</code> was created inside a running container. In production, containers should be immutable — user creation suggests either: (1) an attacker establishing persistence after initial access (MITRE T1136.001), (2) a misconfigured entrypoint script, or (3) debugging activity. On EKS/ECS, container user changes are ephemeral (lost on restart), but an attacker could use the new account to escalate privileges or evade detection during the current container lifetime.",
                 "action": f"Verify who ran <code>kubectl exec</code> — check RBAC audit logs for exec permissions on namespace <code>{namespace}</code>. If unauthorized, investigate the source IP and user identity. Consider switching from LogOnlyPolicy to an enforcement policy that blocks podExec in production namespaces.",
             }
         elif "shadow" in cmd or "/etc/passwd" in cmd:
             return {
+                "severity": "critical", "relevant": "yes",
                 "title": f"Sensitive file access: <code>{cmd}</code>",
                 "analysis": f"Reading <code>/etc/shadow</code> is a credential harvesting technique (MITRE T1003.008). In containers, /etc/shadow contains hashed passwords for system accounts in the base image. While these are typically non-functional service accounts, an attacker may attempt to crack them or use the access pattern to test what other sensitive files are readable. This is a common post-exploitation reconnaissance step.",
                 "action": f"Check if the container runs as root (it shouldn't). Implement read-only root filesystem (<code>readOnlyRootFilesystem: true</code>) in the pod security context. Monitor for follow-up activity: if shadow read is followed by network connections or data exfiltration, treat as active compromise.",
             }
         elif "apt" in cmd or "yum" in cmd or "apk" in cmd:
             return {
+                "severity": "medium", "relevant": "yes",
                 "title": f"Package manager execution: <code>{cmd}</code>",
                 "analysis": f"Running a package manager inside a container at runtime indicates either: (1) an attacker installing tools for lateral movement, exfiltration, or persistence (MITRE T1059.004), (2) a developer debugging, or (3) a poorly built image that installs packages at startup. In production containers on EKS/ECS, packages should be baked into the image at build time. Runtime package installation bypasses vulnerability scanning (TMAS) and introduces unvetted code.",
                 "action": f"Block package manager execution via Container Security runtime rules (or OPA/Gatekeeper policies). Ensure images are built with all dependencies and package managers are removed or disabled in the final image layer. If this was debugging, use ephemeral debug containers (<code>kubectl debug</code>) instead.",
@@ -335,12 +339,14 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
         elif "curl" in cmd or "wget" in cmd:
             target = cmd.split()[-1] if cmd.split() else "unknown"
             return {
+                "severity": "high", "relevant": "yes",
                 "title": f"Outbound HTTP request: <code>{cmd}</code>",
                 "analysis": f"An outbound HTTP connection to <code>{target}</code> was initiated from inside the container. This could be: (1) legitimate application behavior, (2) C2 callback to an attacker-controlled server (MITRE T1071.001), (3) data exfiltration, or (4) downloading additional tools. On EKS/ECS, outbound traffic should be restricted via Network Policies or security groups. The target <code>{target}</code> should be verified against expected application dependencies.",
                 "action": f"Review whether <code>{target}</code> is an expected dependency. Implement Kubernetes NetworkPolicy to restrict egress to known-good destinations. If unexpected, capture full network context: DNS resolution, response size, timing pattern. Check for data in the request body.",
             }
         else:
             return {
+                "severity": "medium", "relevant": "yes",
                 "title": f"Command executed in pod: <code>{cmd}</code>",
                 "analysis": f"A command was executed inside a running container via kubectl exec or equivalent. Any interactive access to production containers should be audited. The command <code>{cmd}</code> should be reviewed in the context of normal operational procedures for this workload.",
                 "action": f"Review RBAC audit logs to identify who executed this command. If this is routine debugging, consider implementing break-glass procedures with time-limited access and mandatory logging.",
@@ -349,12 +355,14 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
         img = images[0]
         obj = objects[0] if objects else "?"
         return {
+            "severity": "high", "relevant": "yes",
             "title": f"Unscanned image deployed: <code>{img}</code>",
             "analysis": f"Container image <code>{img}</code> was deployed to pod <code>{obj}</code> without passing through vulnerability scanning. This means the image bypassed the CI/CD security pipeline — it could contain known CVEs, malware, embedded secrets, or supply-chain compromises. On EKS/ECS, images should be scanned by TMAS (Trend Micro Artifact Scanner) in the CI/CD pipeline before deployment, and admission control should block unscanned images.",
             "action": f"Configure Container Security admission control to <b>block</b> unscanned images (currently set to log-only). Integrate TMAS scanning into your CI/CD pipeline: <code>tmas scan docker:{img}</code>. For existing deployments, trigger a manual scan from the V1 console. Consider using a private registry with mandatory scan policies.",
         }
     elif vtype == "unscannedImage":
         return {
+            "severity": "medium", "relevant": "yes",
             "title": "Unscanned image deployed",
             "analysis": "A container image was deployed without being scanned for vulnerabilities. This bypasses the security scanning pipeline and introduces unknown risk.",
             "action": "Enable admission control to block unscanned images. Integrate TMAS scanning into CI/CD.",
@@ -362,8 +370,8 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
     else:
         ctx = VIOLATION_CONTEXT.get(vtype, {})
         if isinstance(ctx, dict):
-            return {"title": ctx.get("analysis", f"Policy violation: {vtype}"), "analysis": ctx.get("action", ""), "action": ""}
-        return {"title": str(ctx), "analysis": "", "action": ""}
+            return {"severity": "medium", "relevant": "yes", "title": ctx.get("analysis", f"Policy violation: {vtype}"), "analysis": ctx.get("action", ""), "action": ""}
+        return {"severity": "low", "relevant": "low", "title": str(ctx), "analysis": "", "action": ""}
 
 
 def build_events_html(eval_events, sensor_events, xdr_results=None):
@@ -420,6 +428,12 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 
             # Event-specific analysis based on actual command/image
             specific = _analyze_event(vtype, commands, images, objects, cluster, namespace)
+            ev_sev = specific.get("severity", "medium")
+            ev_rel = specific.get("relevant", "yes")
+            sev_colors = {"critical": "#f8d7da", "high": "#f8d7da", "medium": "#fff3cd", "low": "#d4edda"}
+            sev_text_c = {"critical": "#721c24", "high": "#721c24", "medium": "#856404", "low": "#155724"}
+            analysis_html += f'<span class="tag" style="background:{sev_colors.get(ev_sev,"#eee")};color:{sev_text_c.get(ev_sev,"#333")}">{ev_sev.upper()}</span> '
+            analysis_html += f'<span class="tag" style="background:{sev_colors.get("critical" if ev_rel=="yes" else "low","#eee")};color:{sev_text_c.get("critical" if ev_rel=="yes" else "low","#333")}">Relevant: {ev_rel.upper()}</span> '
             analysis_html += f"<strong>{specific['title']}</strong>"
             analysis_html += f"<div class='reasoning'>{specific['analysis']}</div>"
             if specific.get("action"):
@@ -453,6 +467,26 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
                     analysis_html += '</table></div>'
                 elif xdr_results:
                     analysis_html += '<div class="xdr-results"><span class="xdr-label">XDR Results: No container activity telemetry indexed yet. Eval events come through the admission controller pipeline, not the XDR data lake. Runtime sensor telemetry typically takes 15-60 minutes to appear in XDR search after the event.</span></div>'
+
+        # Raw event data (collapsed by default)
+        raw_json = json.dumps(e, indent=2, default=str)
+        event_id = e.get("id", "?")
+        api_url = "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesEvaluationEventLogs"
+        analysis_html += f"""<details class="raw-event">
+<summary>Raw Event Data &amp; API</summary>
+<div class="raw-event-body">
+<div class="xdr-query-box" style="margin-bottom:8px">
+<span class="xdr-label">V1 API Used:</span>
+<code>GET {api_url}</code>
+</div>
+<div class="xdr-query-box" style="margin-bottom:8px">
+<span class="xdr-label">curl:</span>
+<code id="api-{copy_id}">curl -s -H "Authorization: Bearer YOUR_API_KEY" "{api_url}"</code>
+<button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('api-{copy_id}').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='&#x2398;',1200)" title="Copy to clipboard">&#x2398;</button>
+</div>
+<pre class="raw-json">{html_mod.escape(raw_json)}</pre>
+</div>
+</details>"""
 
         if analysis_html:
             rows += f"""<tr class="analysis-row">
@@ -690,6 +724,54 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 </td>
 </tr>"""
 
+    # Build critical findings summary (high relevance + high/critical severity)
+    critical_items = []
+    # From CVE analysis
+    for f in findings:
+        a = analysis_map.get(f["cve"], {})
+        if a.get("relevant") == "yes" and f["severity"] in ("critical", "high"):
+            critical_items.append({
+                "type": "CVE", "id": f["cve"], "severity": f["severity"],
+                "package": f["package"], "title": a.get("action", ""),
+                "detail": a.get("reasoning", ""),
+            })
+    # From runtime events
+    for e in (eval_events or []):
+        cmds = [r.get("command","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("command")]
+        imgs = [r.get("image","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("image")]
+        objs = [r.get("object","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("object")]
+        vtypes = [v.get("type","") for v in e.get("violationReasons",[])]
+        for vt in vtypes:
+            ev = _analyze_event(vt, cmds, imgs, objs, e.get("clusterName",""), e.get("namespace",""))
+            if ev.get("relevant") == "yes" and ev.get("severity") in ("critical", "high"):
+                critical_items.append({
+                    "type": "Runtime", "id": vt, "severity": ev["severity"],
+                    "package": ", ".join(cmds) or ", ".join(imgs) or vt,
+                    "title": ev["title"], "detail": ev["analysis"],
+                })
+
+    if critical_items:
+        crit_html = ""
+        for ci in critical_items:
+            sc = sev_colors.get(ci["severity"], "#eee")
+            st = sev_text.get(ci["severity"], "#333")
+            crit_html += f"""<div class="status-box" style="border-left:4px solid {st}">
+  <span class="tag" style="background:{sc};color:{st}">{ci['severity'].upper()}</span>
+  <span class="tag" style="background:#f8d7da;color:#721c24">{ci['type']}</span>
+  <strong>{ci['title']}</strong>
+  <div class="reasoning" style="margin-top:4px">{ci['detail']}</div>
+</div>"""
+        critical_section = f"""<h2 style="color:#721c24">Critical Findings</h2>
+<p>{len(critical_items)} high-relevance, high-severity findings require immediate attention:</p>
+{crit_html}"""
+    else:
+        critical_section = """<h2 style="color:#155724">Critical Findings</h2>
+<div class="status-box" style="border-left:4px solid #155724">
+  <span class="tag healthy">ALL CLEAR</span>
+  <strong>No high-relevance, high-severity alerts found. Nice!</strong>
+  <div class="reasoning">All detected vulnerabilities and runtime events are either low-relevance to your EKS/ECS environment or low severity. Continue monitoring.</div>
+</div>"""
+
     html = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -748,6 +830,11 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .xdr-table {{ font-size: 0.82em; margin: 4px 0; }}
   .xdr-table th {{ background: var(--code-bg); color: var(--fg); font-size: 0.85em; padding: 4px 8px; }}
   .xdr-table td {{ padding: 3px 8px; font-size: 0.85em; }}
+  .raw-event {{ margin-top: 10px; }}
+  .raw-event summary {{ cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--meta); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 0; }}
+  .raw-event summary:hover {{ color: var(--heading); }}
+  .raw-event-body {{ margin-top: 6px; }}
+  .raw-json {{ background: var(--code-bg); padding: 10px 14px; border-radius: 6px; font-size: 0.78em; line-height: 1.5; overflow-x: auto; max-height: 400px; overflow-y: auto; white-space: pre; font-family: 'Cascadia Code', 'Fira Code', monospace; color: var(--fg); }}
   ul {{ margin: 6px 0; }}
   li {{ margin: 4px 0; }}
   /* Collapsible sections */
@@ -811,6 +898,8 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 
 <h1>V1 Container Security Report</h1>
 <p><strong>Generated:</strong> {now.strftime('%Y-%m-%d %H:%M')} | <strong>Source:</strong> Vision One API + Claude Analysis</p>
+
+{critical_section}
 
 <h2>1. Cluster Overview</h2>
 <div class="section" data-section="cluster">
