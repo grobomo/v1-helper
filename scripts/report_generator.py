@@ -522,7 +522,6 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 <td>{e.get("action","?")}</td>
 <td>{"; ".join(resources) or "-"}</td>
 <td>{e.get("policyName","?")}</td>
-<td style="text-align:center"><a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/server-cloud/container-inventory" target="_blank" style="text-decoration:none;background:#0066cc;color:#fff;white-space:nowrap">Open in V1</a></td>
 </tr>"""
 
         # Build analysis row with event-specific context and XDR query
@@ -639,7 +638,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 </tr>"""
 
     return f"""<table>
-<tr><th>Time</th><th>Cluster</th><th>Namespace</th><th>Kind</th><th>Violation</th><th>Decision</th><th>Action</th><th>Details</th><th>Policy</th><th></th></tr>
+<tr><th>Time</th><th>Cluster</th><th>Namespace</th><th>Kind</th><th>Violation</th><th>Decision</th><th>Action</th><th>Details</th><th>Policy</th><th style="text-align:center"><a href="https://portal.xdr.trendmicro.com/index.html#/app/server-cloud/container-inventory" target="_blank" style="text-decoration:none;color:#fff;background:#0066cc;padding:3px 10px;border-radius:4px;font-size:0.85em;font-weight:700;white-space:nowrap">Open in V1</a></th></tr>
 {rows}
 </table>"""
 
@@ -822,7 +821,6 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <td><code>{f["resourceName"]}</code></td>
 <td>{f.get("containerName","-")}</td>
 <td>{f["repository"]}</td>
-<td style="text-align:center"><a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/sase" target="_blank" style="text-decoration:none;background:#0066cc;color:#fff;white-space:nowrap">Open in V1</a></td>
 </tr>"""
 
         # Full-width analysis row under CVE
@@ -1114,13 +1112,10 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <div class="section" data-section="vulns">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
-<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-<p style="margin:0"><strong>Total:</strong> {total} | <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
-<a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/sase" target="_blank" style="text-decoration:none;margin-left:auto">Open in V1</a>
-</div>
+<p><strong>Total:</strong> {total} | <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
 <p><em>Each CVE has an analysis row below it explaining relevance to your <strong>{env_label}</strong> environment.</em></p>
 <table>
-  <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th><th></th></tr>
+  <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th><th style="text-align:center"><a href="https://portal.xdr.trendmicro.com/index.html#/app/sase" target="_blank" style="text-decoration:none;color:#fff;background:#0066cc;padding:3px 10px;border-radius:4px;font-size:0.85em;font-weight:700;white-space:nowrap">Open in V1</a></th></tr>
 {rows_html}
 </table>
   </div>
@@ -1130,10 +1125,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <div class="section" data-section="events">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
-<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-<p style="margin:0">{len(eval_events or [])} evaluation events, {len(sensor_events or [])} sensor events</p>
-<a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/server-cloud/container-inventory" target="_blank" style="text-decoration:none;margin-left:auto">Open in V1</a>
-</div>
+<p>{len(eval_events or [])} evaluation events, {len(sensor_events or [])} sensor events</p>
 {build_events_html(eval_events or [], sensor_events or [], xdr_results)}
   </div>
 </div>
