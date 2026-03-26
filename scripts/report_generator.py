@@ -396,8 +396,18 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
         cluster = e.get("clusterName", "?")
         namespace = e.get("namespace", "?")
 
+        # Check if this event is critical for red border
+        _cmds = [r.get("command","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("command")]
+        _imgs = [r.get("image","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("image")]
+        _objs = [r.get("object","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("object")]
+        _evt_crit = any(
+            _analyze_event(vt, _cmds, _imgs, _objs, cluster, namespace).get("severity") in ("critical", "high")
+            for vt in violations
+        )
+        evt_crit_cls = ' class="crit-row"' if _evt_crit else ''
+
         decision_color = "#44ff44" if e.get("decision") == "allow" else "#ff4444"
-        rows += f"""<tr id="evt-{e_idx}" style="scroll-margin-top:50px">
+        rows += f"""<tr id="evt-{e_idx}"{evt_crit_cls} style="scroll-margin-top:50px">
 <td>{e.get("createdDateTime","")[:19]}</td>
 <td>{cluster}</td>
 <td>{namespace}</td>
@@ -690,7 +700,9 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
         cve = f["cve"]
         analysis = analysis_map.get(cve, {})
 
-        rows_html += f"""<tr id="cve-{cve}" style="scroll-margin-top:50px">
+        is_crit = analysis.get("relevant") == "yes" and f["severity"] in ("critical", "high")
+        crit_cls = ' class="crit-row"' if is_crit else ''
+        rows_html += f"""<tr id="cve-{cve}"{crit_cls} style="scroll-margin-top:50px">
 <td><a href="{f['cveLink']}" target="_blank">{cve}</a></td>
 <td><span class="tag" style="background:{sc};color:{st}">{f["severity"].upper()}</span></td>
 <td>{f.get('score','')}</td>
@@ -859,6 +871,15 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .crit-item:hover {{ border-color: #f0c040; background: var(--bg2); }}
   .crit-pkg {{ font-weight: 700; font-size: 0.85em; min-width: 70px; }}
   .crit-title {{ font-size: 0.85em; color: var(--reasoning); }}
+  /* Target highlight when jumping from critical findings */
+  /* Target highlight on jump from critical findings */
+  tr:target, tr:target + tr.analysis-row {{ outline: 2px solid #f0c040; outline-offset: -2px; }}
+  @keyframes target-flash {{ 0% {{ outline-color: #f0c040; }} 100% {{ outline-color: transparent; }} }}
+  tr.flash-target, tr.flash-target + tr.analysis-row {{ animation: target-flash 2s ease forwards; }}
+  /* Permanent red border on critical/high-relevant items — data row + analysis row */
+  tr.crit-row td {{ border-left-color: #e94560; }}
+  tr.crit-row td:first-child {{ border-left: 4px solid #e94560; }}
+  tr.crit-row + tr.analysis-row td {{ border-left: 4px solid #e94560; }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event summary {{ cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--meta); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 0; }}
   .raw-event summary:hover {{ color: var(--heading); }}
@@ -1014,6 +1035,16 @@ function toggleSection(bar) {{
 }}
 // Init: set max-height to none for all expanded sections
 document.querySelectorAll('.section-body').forEach(b => b.style.maxHeight = 'none');
+// Flash yellow border when jumping to target from critical findings
+function flashTarget(){{
+  const id=location.hash.slice(1);if(!id)return;
+  const el=document.getElementById(id);if(!el)return;
+  document.querySelectorAll('.flash-target').forEach(e=>e.classList.remove('flash-target'));
+  el.classList.add('flash-target');
+  setTimeout(()=>el.classList.remove('flash-target'),2200);
+}}
+window.addEventListener('hashchange',flashTarget);
+if(location.hash)setTimeout(flashTarget,400);
 // CSV export
 function exportCSV(){{
   const NL='\\n';
