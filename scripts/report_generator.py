@@ -364,6 +364,90 @@ def run_analysis(findings, customer_context, batch_size=15):
     return all_results
 
 
+def generate_relevance(analyses, customer_context):
+    """Generate relevance reasoning for each CVE by comparing analysis against customer context.
+    Runs at report time so relevance updates when customer context changes without re-analyzing CVEs."""
+    ctx_lower = customer_context.lower()
+
+    # Extract key facts from customer context
+    managed_k8s = any(k in ctx_lower for k in ["eks", "ecs", "gke", "aks"])
+    workloads = []
+    for line in customer_context.split("\n"):
+        line_l = line.strip().lower()
+        if line_l.startswith("- ") and any(w in line_l for w in ["nginx", "node", "java", "python", "go", "redis", "postgres"]):
+            workloads.append(line.strip("- ").strip())
+
+    # Packages the workloads actually use (extract from context)
+    runtime_packages = set()
+    not_used_packages = set()
+    in_runtime = False
+    in_not_used = False
+    for line in customer_context.split("\n"):
+        ll = line.strip().lower()
+        if "actually uses" in ll or "uses at runtime" in ll:
+            in_runtime = True; in_not_used = False; continue
+        if "not used" in ll or "likely not" in ll:
+            in_not_used = True; in_runtime = False; continue
+        if ll.startswith("#"):
+            in_runtime = False; in_not_used = False; continue
+        if (in_runtime or in_not_used) and ll.startswith("- "):
+            pkgs = [p.strip().lower() for p in ll.lstrip("- ").split(",")]
+            for p in pkgs:
+                # Extract package name before parenthetical
+                name = p.split("(")[0].split("/")[0].strip()
+                if name:
+                    if in_runtime:
+                        runtime_packages.add(name)
+                    else:
+                        not_used_packages.add(name)
+
+    for cve_id, a in analyses.items():
+        reasoning = a.get("reasoning", "")
+        action = a.get("action", "")
+        relevant = a.get("relevant", "no")
+        pkg_mentioned = a.get("action", "").lower()
+
+        # Build relevance reasoning from context
+        rel_parts = []
+
+        # Check if package is in runtime or not-used lists
+        for pkg in not_used_packages:
+            if pkg in reasoning.lower() or pkg in action.lower():
+                rel_parts.append(f"{pkg} is listed as NOT used at runtime in this environment")
+                break
+        for pkg in runtime_packages:
+            if pkg in reasoning.lower() or pkg in action.lower():
+                rel_parts.append(f"{pkg} IS used at runtime in this environment")
+                break
+
+        # Kernel vs userspace
+        if "kernel" in reasoning.lower():
+            if managed_k8s:
+                rel_parts.append("managed K8s (host kernel controlled by cloud provider, not container image)")
+            else:
+                rel_parts.append("self-managed K8s (host kernel may need separate patching)")
+
+        if "userspace" in reasoning.lower() or "libc" in reasoning.lower():
+            rel_parts.append("userspace library — container links against its own copy at runtime")
+
+        if "disputed" in reasoning.lower():
+            rel_parts.append("upstream disputes this as a real vulnerability")
+
+        if "transitive" in reasoning.lower() or "base image" in reasoning.lower():
+            rel_parts.append("transitive base image dependency, not directly invoked")
+
+        # Fallback based on relevant field
+        if not rel_parts:
+            if relevant == "yes":
+                rel_parts.append("affects packages/functions active in this workload")
+            elif relevant == "low":
+                rel_parts.append("theoretical risk — requires specific conditions unlikely in this environment")
+            else:
+                rel_parts.append("package not used by this workload at runtime")
+
+        a["relevance_reasoning"] = ". ".join(rel_parts) + "."
+
+
 # ============================================================
 # HTML Output
 # ============================================================
@@ -851,7 +935,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <td colspan="10">
   <div class="analysis-detail">
     <span class="tag" style="background:{rel_bg};color:{rel_fg}">Relevant: {relevant.upper()}</span>
-    <span class="owner-tag">{owner}</span>
+    {f'<span class="owner-tag">{owner}</span>' if owner and owner != 'none' else ''}
     <strong>{action}</strong>
     <div class="reasoning">{reasoning}</div>
     <div class="reasoning" style="margin-top:4px"><strong style="color:var(--heading)">Relevance:</strong> {analysis.get('relevance_reasoning', '') or ('Relevant to this environment — see analysis above.' if relevant == 'yes' else 'Low priority — see analysis above.' if relevant == 'low' else 'Not relevant to this environment — see analysis above.')}</div>
@@ -1393,6 +1477,9 @@ def main():
     date = datetime.datetime.now().strftime('%Y-%m-%d')
     out = args.output or str(REPORTS_DIR / f"EP_Container_Security_{date}.html")
     customer_ctx = load_customer_context(args.customer, clusters, vulns, occurrences)
+    if analyses:
+        print("Generating relevance reasoning from customer context...")
+        generate_relevance(analyses, customer_ctx)
     write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx)
     print(f"\nReport: {out}")
 
