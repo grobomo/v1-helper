@@ -986,16 +986,15 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   /* Target highlight — flash row background yellow then revert */
   @keyframes target-flash {{ 0%,20% {{ background: rgba(240,192,64,0.25); }} 100% {{ background: inherit; }} }}
   tr.flash-target td, tr.flash-target + tr.analysis-row td {{ animation: target-flash 2s ease; }}
-  /* Subtle border around each CVE/event row pair for visual separation */
-  tr[id^="cve-"] td, tr[id^="evt-"] td {{ box-shadow: 0 -1px 0 var(--border) inset; }}
-  tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ box-shadow: 0 -1px 0 var(--border) inset, 1px 0 0 var(--border) inset; }}
-  tr[id^="cve-"] td:last-child, tr[id^="evt-"] td:last-child {{ box-shadow: 0 -1px 0 var(--border) inset, -1px 0 0 var(--border) inset; }}
-  tr[id^="cve-"] + tr.analysis-row td, tr[id^="evt-"] + tr.analysis-row td {{ box-shadow: 0 1px 0 var(--border) inset, 1px 0 0 var(--border) inset, -1px 0 0 var(--border) inset; }}
-  /* Red box around critical items — outline avoids border-separate gaps */
-  tr.crit-row td {{ box-shadow: 0 -2px 0 #e94560 inset, 0 0 0 0 transparent; }}
-  tr.crit-row td:first-child {{ box-shadow: 0 -2px 0 #e94560 inset, 2px 0 0 #e94560 inset; }}
-  tr.crit-row td:last-child {{ box-shadow: 0 -2px 0 #e94560 inset, -2px 0 0 #e94560 inset; }}
-  tr.crit-row + tr.analysis-row td {{ box-shadow: 0 2px 0 #e94560 inset, 2px 0 0 #e94560 inset, -2px 0 0 #e94560 inset; }}
+  /* Row pair borders — neutral outline, crit overrides with red */
+  tr[id^="cve-"] td, tr[id^="evt-"] td {{ box-shadow: inset 0 -1px 0 var(--border), inset 0 1px 0 var(--border); }}
+  tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ box-shadow: inset 0 -1px 0 var(--border), inset 0 1px 0 var(--border), inset 1px 0 0 var(--border); }}
+  tr[id^="cve-"] td:last-child, tr[id^="evt-"] td:last-child {{ box-shadow: inset 0 -1px 0 var(--border), inset 0 1px 0 var(--border), inset -1px 0 0 var(--border); }}
+  tr[id] + tr.analysis-row td {{ box-shadow: inset 0 -1px 0 var(--border), inset 1px 0 0 var(--border), inset -1px 0 0 var(--border); }}
+  tr.crit-row td {{ box-shadow: inset 0 -2px 0 #e94560, inset 0 2px 0 #e94560; }}
+  tr.crit-row td:first-child {{ box-shadow: inset 0 -2px 0 #e94560, inset 0 2px 0 #e94560, inset 2px 0 0 #e94560; }}
+  tr.crit-row td:last-child {{ box-shadow: inset 0 -2px 0 #e94560, inset 0 2px 0 #e94560, inset -2px 0 0 #e94560; }}
+  tr.crit-row + tr.analysis-row td {{ box-shadow: inset 0 -2px 0 #e94560, inset 2px 0 0 #e94560, inset -2px 0 0 #e94560; }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event summary {{ cursor: pointer; font-size: 0.8em; font-weight: 700; color: var(--fg); background: var(--code-bg); display: block; padding: 8px 12px; border-radius: 6px; text-align: center; letter-spacing: 0.3px; transition: background 0.15s; }}
