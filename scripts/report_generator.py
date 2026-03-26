@@ -1009,7 +1009,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   li {{ margin: 4px 0; }}
   /* Collapsible sections */
   .section {{ display: flex; align-items: stretch; margin: 0 0 4px; }}
-  .section-bar {{ width: 18px; min-width: 18px; background: var(--border); border-radius: 4px 0 0 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding-top: 10px; gap: 6px; transition: background 0.15s, width 0.2s, min-width 0.2s; flex-shrink: 0; user-select: none; }}
+  .section-bar {{ width: 18px; min-width: 18px; background: var(--border); border-radius: 4px 0 0 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 10px 0 16px; gap: 6px; transition: background 0.15s, width 0.2s, min-width 0.2s; flex-shrink: 0; user-select: none; }}
   .section-bar:hover {{ background: var(--heading); }}
   .section-bar:hover .chev {{ stroke: var(--th-fg); }}
   .section-bar:hover .expand-label {{ color: var(--th-fg); }}
