@@ -512,7 +512,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
         raw_inner += f'<pre class="raw-json">{html_mod.escape(raw_json)}</pre>'
 
         analysis_html += f"""<details class="raw-event">
-<summary>Raw Event Data &amp; API</summary>
+<summary>Review XDR Data</summary>
 <div class="raw-event-body">{raw_inner}</div>
 </details>"""
 
@@ -910,9 +910,10 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   tr.crit-row + tr.analysis-row td:first-child {{ border-left: 2px solid #e94560; }}
   tr.crit-row + tr.analysis-row td:last-child {{ border-right: 2px solid #e94560; }}
   .raw-event {{ margin-top: 10px; }}
-  .raw-event summary {{ cursor: pointer; font-size: 0.75em; font-weight: 700; color: var(--th-fg); background: var(--th-bg); display: inline-block; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; transition: opacity 0.15s; }}
-  .raw-event summary:hover {{ opacity: 0.85; }}
-  .raw-event[open] summary {{ border-radius: 4px 4px 0 0; }}
+  .raw-event {{ margin-top: 10px; }}
+  .raw-event summary {{ cursor: pointer; font-size: 0.8em; font-weight: 700; color: var(--fg); background: var(--code-bg); display: block; padding: 8px 12px; border-radius: 6px; text-align: center; letter-spacing: 0.3px; transition: background 0.15s; }}
+  .raw-event summary:hover {{ background: var(--border); }}
+  .raw-event[open] summary {{ border-radius: 6px 6px 0 0; }}
   .raw-event-body {{ margin-top: 6px; }}
   .raw-json {{ background: var(--code-bg); padding: 10px 14px; border-radius: 6px; font-size: 0.78em; line-height: 1.5; overflow-x: auto; max-height: 400px; overflow-y: auto; white-space: pre; font-family: 'Cascadia Code', 'Fira Code', monospace; color: var(--fg); }}
   ul {{ margin: 6px 0; }}
