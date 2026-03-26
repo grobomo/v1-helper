@@ -148,6 +148,25 @@ def load_customer_context():
     return "No customer context file found. Analyze based on general container security best practices."
 
 
+def extract_env_label(customer_context):
+    """Extract a short environment label from customer context for display."""
+    ctx = customer_context.lower()
+    parts = []
+    if "eks" in ctx: parts.append("EKS")
+    if "ecs" in ctx: parts.append("ECS")
+    if "gke" in ctx: parts.append("GKE")
+    if "aks" in ctx: parts.append("AKS")
+    if "openshift" in ctx: parts.append("OpenShift")
+    if "microk8s" in ctx: parts.append("MicroK8s")
+    if "k3s" in ctx: parts.append("K3s")
+    if "rancher" in ctx: parts.append("Rancher")
+    if not parts:
+        if "container" in ctx: parts.append("Container")
+        elif "kubernetes" in ctx or "k8s" in ctx: parts.append("Kubernetes")
+        else: parts.append("General")
+    return "/".join(parts)
+
+
 def analyze_batch(findings_batch, customer_context, anthropic_key):
     """Send a batch of findings to Claude for environment-aware analysis."""
     # Build the findings summary for the prompt
@@ -177,7 +196,7 @@ CRITICAL ANALYSIS RULES:
 
 2. For EACH CVE you must:
    - State the SPECIFIC vulnerability (not just "check if you use this package")
-   - Explain WHY it is or isn't relevant to THIS container (nginx on EKS/ECS)
+   - Explain WHY it is or isn't relevant to THIS container based on the customer context
    - If disputed/theoretical, cite that explicitly (e.g. "marked DISPUTED on NVD")
    - Reference the actual CVE being analyzed, not a different one
 
@@ -319,7 +338,7 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
             return {
                 "severity": "high", "relevant": "yes",
                 "title": f"User creation detected: <code>{cmd}</code>",
-                "analysis": f"A new user account <code>{user}</code> was created inside a running container. In production, containers should be immutable — user creation suggests either: (1) an attacker establishing persistence after initial access (MITRE T1136.001), (2) a misconfigured entrypoint script, or (3) debugging activity. On EKS/ECS, container user changes are ephemeral (lost on restart), but an attacker could use the new account to escalate privileges or evade detection during the current container lifetime.",
+                "analysis": f"A new user account <code>{user}</code> was created inside a running container. In production, containers should be immutable — user creation suggests either: (1) an attacker establishing persistence after initial access (MITRE T1136.001), (2) a misconfigured entrypoint script, or (3) debugging activity. In managed Kubernetes environments,container user changes are ephemeral (lost on restart), but an attacker could use the new account to escalate privileges or evade detection during the current container lifetime.",
                 "action": f"Verify who ran <code>kubectl exec</code> — check RBAC audit logs for exec permissions on namespace <code>{namespace}</code>. If unauthorized, investigate the source IP and user identity. Consider switching from LogOnlyPolicy to an enforcement policy that blocks podExec in production namespaces.",
             }
         elif "shadow" in cmd or "/etc/passwd" in cmd:
@@ -341,7 +360,7 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
             return {
                 "severity": "high", "relevant": "yes",
                 "title": f"Outbound HTTP request: <code>{cmd}</code>",
-                "analysis": f"An outbound HTTP connection to <code>{target}</code> was initiated from inside the container. This could be: (1) legitimate application behavior, (2) C2 callback to an attacker-controlled server (MITRE T1071.001), (3) data exfiltration, or (4) downloading additional tools. On EKS/ECS, outbound traffic should be restricted via Network Policies or security groups. The target <code>{target}</code> should be verified against expected application dependencies.",
+                "analysis": f"An outbound HTTP connection to <code>{target}</code> was initiated from inside the container. This could be: (1) legitimate application behavior, (2) C2 callback to an attacker-controlled server (MITRE T1071.001), (3) data exfiltration, or (4) downloading additional tools. In managed Kubernetes environments,outbound traffic should be restricted via Network Policies or security groups. The target <code>{target}</code> should be verified against expected application dependencies.",
                 "action": f"Review whether <code>{target}</code> is an expected dependency. Implement Kubernetes NetworkPolicy to restrict egress to known-good destinations. If unexpected, capture full network context: DNS resolution, response size, timing pattern. Check for data in the request body.",
             }
         else:
@@ -357,7 +376,7 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
         return {
             "severity": "high", "relevant": "yes",
             "title": f"Unscanned image deployed: <code>{img}</code>",
-            "analysis": f"Container image <code>{img}</code> was deployed to pod <code>{obj}</code> without passing through vulnerability scanning. This means the image bypassed the CI/CD security pipeline — it could contain known CVEs, malware, embedded secrets, or supply-chain compromises. On EKS/ECS, images should be scanned by TMAS (Trend Micro Artifact Scanner) in the CI/CD pipeline before deployment, and admission control should block unscanned images.",
+            "analysis": f"Container image <code>{img}</code> was deployed to pod <code>{obj}</code> without passing through vulnerability scanning. This means the image bypassed the CI/CD security pipeline — it could contain known CVEs, malware, embedded secrets, or supply-chain compromises. In managed Kubernetes environments,images should be scanned by TMAS (Trend Micro Artifact Scanner) in the CI/CD pipeline before deployment, and admission control should block unscanned images.",
             "action": f"Configure Container Security admission control to <b>block</b> unscanned images (currently set to log-only). Integrate TMAS scanning into your CI/CD pipeline: <code>tmas scan docker:{img}</code>. For existing deployments, trigger a manual scan from the V1 console. Consider using a private registry with mandatory scan policies.",
         }
     elif vtype == "unscannedImage":
@@ -536,8 +555,10 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 </table>"""
 
 
-def write_html(findings, analyses, clusters, output_path, eval_events=None, sensor_events=None, xdr_results=None):
+def write_html(findings, analyses, clusters, output_path, eval_events=None, sensor_events=None, xdr_results=None, customer_context=None):
     now = datetime.datetime.now()
+    customer_context = customer_context or "No customer context provided. Analysis based on general container security best practices."
+    env_label = extract_env_label(customer_context)
     sev_colors = {"critical": "#f8d7da", "high": "#f8d7da", "medium": "#fff3cd", "low": "#d4edda"}
     sev_text = {"critical": "#721c24", "high": "#721c24", "medium": "#856404", "low": "#155724"}
 
@@ -872,10 +893,9 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .crit-pkg {{ font-weight: 700; font-size: 0.85em; min-width: 70px; }}
   .crit-title {{ font-size: 0.85em; color: var(--reasoning); }}
   /* Target highlight when jumping from critical findings */
-  /* Target highlight on jump from critical findings */
-  tr:target, tr:target + tr.analysis-row {{ outline: 2px solid #f0c040; outline-offset: -2px; }}
-  @keyframes target-flash {{ 0% {{ outline-color: #f0c040; }} 100% {{ outline-color: transparent; }} }}
-  tr.flash-target, tr.flash-target + tr.analysis-row {{ animation: target-flash 2s ease forwards; }}
+  /* Target highlight — flash row background yellow */
+  @keyframes target-flash {{ 0%,15% {{ background: rgba(240,192,64,0.3); }} 100% {{ background: transparent; }} }}
+  tr.flash-target td, tr.flash-target + tr.analysis-row td {{ animation: target-flash 2s ease forwards; }}
   /* Subtle border around each CVE/event row pair for visual separation */
   tr[id^="cve-"] td, tr[id^="evt-"] td {{ border-top: 2px solid var(--border); }}
   tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ border-left: 2px solid var(--border); }}
@@ -957,7 +977,19 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 </script>
 
 <h1>V1 Container Security Report</h1>
-<p><strong>Generated:</strong> {now.strftime('%Y-%m-%d %H:%M')} | <strong>Source:</strong> Vision One API + Claude Analysis</p>
+<p><strong>Generated:</strong> {now.strftime('%Y-%m-%d %H:%M')} | <strong>Source:</strong> Vision One API + Claude Analysis | <strong>Environment:</strong> {env_label}</p>
+
+<h2 style="scroll-margin-top:50px">Environment Context</h2>
+<div class="section collapsed" data-section="env-ctx">
+  <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
+  <div class="section-body" style="max-height:0;opacity:0">
+<div class="status-box">
+  <p>The following environment context was used for all CVE relevance analysis and runtime event assessment. <strong>Review and correct if inaccurate</strong> — analysis quality depends on this being right.</p>
+  <pre class="raw-json" style="max-height:none">{html_mod.escape(customer_context)}</pre>
+  <p class="meta" style="margin-top:8px;border:none">Edit <code>reports/customer-context.md</code> and re-run to update analysis for a different environment.</p>
+</div>
+  </div>
+</div>
 
 {critical_section}
 
@@ -983,7 +1015,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
 <p><strong>Total:</strong> {total} | <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
-<p><em>Each CVE has an analysis row below it explaining relevance to your EKS/ECS environment.</em></p>
+<p><em>Each CVE has an analysis row below it explaining relevance to your <strong>{env_label}</strong> environment.</em></p>
 <table>
   <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th></tr>
 {rows_html}
@@ -1194,7 +1226,8 @@ def main():
 
     date = datetime.datetime.now().strftime('%Y-%m-%d')
     out = args.output or str(REPORTS_DIR / f"EP_Container_Security_{date}.html")
-    write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results)
+    customer_ctx = load_customer_context()
+    write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx)
     print(f"\nReport: {out}")
 
     # Auto-open
