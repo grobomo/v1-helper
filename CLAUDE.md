@@ -1,184 +1,138 @@
 # v1-helper
 
-Claude Code skill that adds intelligent analysis to TrendAI Vision One console. NOT a standalone extension — uses Blueprint Extra MCP for all browser automation.
+Container security report generator for Trend Vision One. Pulls V1 API data, analyzes CVEs and runtime events with Claude, generates self-contained HTML reports with interactive features.
 
-## What It Does
+## Quick Start
 
-Runs inside V1 console pages. Reads vulnerability/detection data from the DOM and V1 API, sends it through Claude for environment-aware analysis, and presents results directly in the V1 UI — no separate report tab needed (but can open one for full detail).
+```bash
+# Run report for a customer (first run auto-creates config + context)
+python scripts/report_generator.py --customer ep
 
-## Architecture
+# Use cached V1 data (skip API calls, faster iteration)
+python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.json
 
-v1-helper is a **Claude Code skill** that orchestrates:
-- **Blueprint Extra MCP** for browser automation (click tracking, DOM reading, overlay injection, action automation)
-- **V1 API** for data enrichment (vulnerabilities, clusters, image occurrences)
-- **Claude analysis** (this session) for environment-aware CVE assessment
-
+# Skip Claude LLM analysis (use existing analysis.json)
+python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.json --skip-llm
 ```
-v1-helper/
-├── CLAUDE.md                  # This file
-├── SKILL.md                   # Skill definition for Claude Code
-├── TODO.md                    # Task tracking
-├── executor.py                # Main entry point — orchestrates everything
-├── v1_reader.py               # Reads V1 page data via Blueprint MCP snapshot/evaluate
-├── v1_overlay.py              # Injects analysis overlays via Blueprint MCP evaluate
-├── v1_actions.py              # Automates V1 actions via Blueprint MCP interact/evaluate
-├── v1_api.py                  # V1 REST API wrapper (uses credential store)
-├── report_generator.py        # Generates HTML report (moved from recording-analyzer)
-├── customer-context.md        # Customer-specific notes for analysis
-└── .github/
-    └── publish.json
-```
-
-### How It Works (no custom extension needed)
-
-1. **Blueprint Extra MCP** is already installed as a Chrome extension with full DOM access
-2. v1-helper calls Blueprint MCP tools via mcp-manager:
-   - `browser_snapshot` — read V1 page DOM to find CVE rows
-   - `browser_evaluate` — inject JS to read table data, add overlays/tooltips
-   - `browser_interact` — click V1 UI elements for actions (dismiss, accept)
-   - `browser_take_screenshot` — capture state
-3. New Blueprint Extra tools needed (to be built):
-   - `browser_track_interactions` — start/stop click+keypress recording with DOM path, screenshot, network capture
-   - `browser_inject_overlay` — insert HTML elements into specific DOM locations on a page
-   - `browser_click_sequence` — execute a series of clicks/waits for multi-step V1 actions
 
 ## How It Works
 
-### Flow
+### Report Generation Flow
 
-1. User says "analyze V1 container security" or runs `python executor.py`
-2. executor.py attaches to V1 tab via Blueprint MCP (`browser_tabs attach`)
-3. v1_reader.py uses `browser_snapshot` + `browser_evaluate` to scrape CVE table data from V1 DOM
-4. v1_api.py calls V1 REST API for enrichment data (image occurrences, cluster details)
-5. Claude (this session) analyzes each finding with customer context
-6. v1_overlay.py uses `browser_evaluate` to inject analysis tooltips directly into V1 page DOM
-7. OR report_generator.py creates HTML report with "Take Action" buttons
-8. v1_actions.py uses `browser_interact` + `browser_evaluate` to automate V1 actions (dismiss, accept)
+```
+1. Load customer config        customers/<name>.json (API key name, region)
+2. Pull V1 data                Clusters, vulns, image occurrences, eval/sensor events
+3. Cache raw data              reports/<customer>-raw-data.json
+4. Enrich with K8s context     Map CVEs to namespaces, deployments, containers, labels
+5. Load/run CVE analysis       reports/analysis.json (cached) or Claude API (fresh)
+6. Generate relevance          Compare analysis against customers/<name>.md context
+7. Run XDR queries             Container activity search for runtime events
+8. Write HTML report           reports/<customer>_Container_Security_<date>.html
+9. Auto-open in browser
+```
 
-### Blueprint Extra MCP Tools Used (existing)
+### Analysis Flow (two-pass)
 
-- `browser_tabs` — list/attach to V1 tab
-- `browser_snapshot` — read DOM tree
-- `browser_evaluate` — execute JS in V1 page (read data, inject overlays)
-- `browser_interact` — click elements
-- `browser_take_screenshot` — capture state
-- `browser_lookup` — find elements by text
+**Pass 1 — CVE Analysis** (cached in `reports/analysis.json`):
+- What is this vulnerability? Technical details, affected function, impact type.
+- Generic and factual — same analysis works across customers.
+- Done by Claude (this session or API) once, reused across runs.
 
-### Blueprint Extra MCP Tools Needed (to build)
+**Pass 2 — Relevance** (generated fresh every run from `customers/<name>.md`):
+- Does this CVE matter in THIS customer's environment?
+- Reads customer context: runtime packages, managed K8s type, workload descriptions.
+- Updates automatically when customer context changes — no re-analysis needed.
 
-- `browser_track_interactions` — start/stop click+keypress recording. Each event captures: DOM path, element attributes, screenshot, network requests triggered. Generic feature useful across all projects.
-- `browser_inject_overlay` — insert persistent HTML overlay at a specific DOM location. Survives SPA navigation. Generic.
-- `browser_click_sequence` — execute multi-step click sequences with waits between steps. Generic.
+### Customer Setup
 
-## V1 Pages to Support
+Each customer gets two files in `customers/`:
 
-| Page | URL Pattern | What to Read | What to Overlay |
-|------|-------------|-------------|-----------------|
-| Vulnerability Management | `#/app/sase` | CVE table rows | Analysis per CVE |
-| Container Inventory | `#/app/server-cloud/container-inventory` | Cluster/pod tree | Protection status notes |
-| Code Security | `#/app/server-cloud/code-security` (or via nav) | CI/CD artifact scans | Scan result analysis |
-| Cyber Risk Overview | `#/dashboard` | Risk index, risk factors | Prioritized actions |
+**`<name>.json`** — API config (auto-created on first run):
+```json
+{
+  "api_key_name": "v1-api/EP_API_KEY",
+  "region": "us-east-1"
+}
+```
+
+**`<name>.md`** — Environment context (auto-generated from V1 API, then edited):
+- Clusters, orchestrator, nodes, registries, images, namespaces, workloads
+- What packages are used at runtime vs transitive deps
+- TODO prompts for what only the customer knows
+
+### Adding a New Customer
+
+```bash
+# 1. Store their V1 API key
+python ~/.claude/skills/credential-manager/store_gui.py "v1-api/ACME_API_KEY"
+
+# 2. Run the report (auto-creates customers/acme.json + customers/acme.md)
+python scripts/report_generator.py --customer acme
+
+# 3. Review and edit customers/acme.md with customer-specific context
+
+# 4. Re-run for updated relevance analysis
+python scripts/report_generator.py --customer acme --cached reports/acme-raw-data.json --skip-llm
+```
+
+## Report Features
+
+- **Critical Findings** — clickable jump links to high-severity, high-relevance items
+- **CVE Analysis** — per-CVE reasoning with relevance section tied to customer context
+- **Runtime Event Analysis** — MITRE ATT&CK mapping, command-specific analysis
+- **XDR Queries** — copy-pasteable curl commands with proper headers
+- **Raw Event Data** — collapsible JSON + API reference per event
+- **Collapsible Sections** — sidebar bar with Expand label, auto-scroll on collapse
+- **Dark/Light Mode** — toggle with smooth transitions, persists in localStorage
+- **Sticky Toolbar** — font size controls, CSV/PDF export, theme toggle
+- **Sticky Table Headers** — column headers follow you while scrolling
+- **Red Border** — highlights critical items needing action
+- **Environment Context Editor** — inline edit + save to disk via File System Access API
+- **Self-Contained HTML** — single file, no dependencies, shareable via email
+
+## Project Structure
+
+```
+v1-helper/
+├── CLAUDE.md                     # This file
+├── TODO.md                       # Roadmap
+├── .gitignore
+├── .github/
+│   ├── publish.json              # grobomo account config
+│   └── workflows/
+│       └── secret-scan.yml       # CI secret scanning
+├── scripts/
+│   ├── report_generator.py       # Main report generator
+│   ├── executor.py               # V1 page orchestrator (Blueprint MCP)
+│   ├── v1_api.py                 # V1 REST API wrapper
+│   ├── v1_reader.py              # V1 DOM reader via Blueprint
+│   ├── v1_overlay.py             # V1 DOM overlay injection
+│   └── v1_actions.py             # V1 action automation
+├── customers/                    # Per-customer config + context (gitignored)
+│   ├── demo.json                 # API key name + region
+│   ├── demo.md                   # Environment context
+│   ├── ep.json
+│   └── ep.md
+└── reports/                      # Generated reports + cached data (gitignored)
+    ├── analysis.json             # Cached CVE analysis (shared across customers)
+    ├── demo-raw-data.json        # Cached V1 API responses
+    ├── ep-raw-data.json
+    └── ep_Container_Security_2026-03-25.html
+```
 
 ## V1 API Endpoints Used
 
-From background script (using session cookies):
-- `/v3.0/containerSecurity/vulnerabilities` — CVE list with cluster/image context
-- `/v3.0/containerSecurity/kubernetesClusters` — cluster metadata, nodes, pods
-- `/v3.0/containerSecurity/kubernetesImageOccurrences` — namespace, resourceType, resourceName, containerName
-- `/v3.0/containerSecurity/kubernetesEvaluationEventLogs` — policy violation events
-- `/v3.0/containerSecurity/kubernetesSensorEventLogs` — runtime detections
-
-## Customer Context
-
-The extension loads `customer-context.json` which contains customer-specific notes that affect analysis:
-- What runtime environment (containers on EKS, VMs, etc.)
-- What packages are actually used vs transitive dependencies
-- Known accepted risks
-- Team structure (who handles what: dev team, SRE, security)
-
-This file can be updated per-customer when switching between accounts in the XDR Support Portal.
-
-## User Interaction Tracking
-
-The extension records all clicks and keypresses in V1 to:
-1. Identify repetitive workflows (e.g., 15 clicks to dismiss one CVE)
-2. Surface automation opportunities (if user does X > Y > Z every time, offer a one-click shortcut)
-3. Track time spent per V1 section for prioritization
-4. Build a click heatmap showing where users spend most effort
-
-### How It Works
-
-- `content/v1-tracker.js` — listens for all click and keypress events on V1 pages
-- Each event captures:
-  - Timestamp
-  - Full DOM path to clicked element (e.g., `body > div#App > section > div.ant-table > tbody > tr:nth-child(3) > td.cve-col > a`)
-  - Element attributes: tag, id, classes, text content, aria-label, data-* attributes
-  - Page URL hash (which V1 section)
-  - Click coordinates
-  - Screenshot of the visible viewport at moment of click (via `chrome.tabs.captureVisibleTab`)
-  - Network requests triggered by the click (via `chrome.webRequest` listener — captures URL, method, status for requests fired within 2s after click)
-- Background.js correlates: click event + screenshot + network requests into a single interaction record
-- Stored in IndexedDB (chrome.storage.local is too small for screenshots) with daily rotation
-- Extension popup shows: recent interactions with thumbnail screenshots, repetitive sequences, network-heavy clicks
-
-### Privacy
-
-- Only tracks on portal.xdr.trendmicro.com (V1 console)
-- Does NOT capture form input values, passwords, or sensitive text content
-- Captures element identifiers (button text, menu item names) for workflow analysis
-- Data stays local in extension storage, never sent externally
-- User can clear tracking data from popup
-
-## Key Design Decisions
-
-- **Overlays in V1 UI** — users stay in V1, analysis appears where they need it
-- **Report tab as fallback** — for full detail and bulk actions
-- **Report tab CAN automate V1** — because chrome.tabs.executeScript works from extension pages to content script tabs
-- **Session cookies for API** — no separate API key management, uses existing V1 login
-- **Claude analysis cached** — same CVE + same package + same context = same result, don't re-analyze
-
-## Relationship to Blueprint Extra MCP
-
-Click/keypress tracking and browser automation are **generic capabilities that belong in Blueprint Extra**, not in this project. v1-helper depends on Blueprint Extra and adds V1-specific wrappers.
-
-### What lives in Blueprint Extra (generic, reusable across projects):
-- Click/keypress event capture with full DOM path
-- Screenshot on interaction
-- Network request correlation
-- IndexedDB storage with rotation
-- Interaction replay/export
-- DOM element targeting and clicking
-- Page scraping utilities
-
-### What lives in v1-helper (V1-specific):
-- V1 page detection (which console section is active)
-- V1 DOM selectors for CVE tables, container inventory, etc.
-- V1 API wrappers using session cookies
-- Claude analysis integration for V1 vulnerability data
-- V1 action automation (dismiss/accept/remediate button sequences)
-- Customer context management
-- V1 overlay injection (tooltips, badges in V1 UI)
-
-### Architecture change needed:
-- Move `v1-tracker.js` generic tracking logic into Blueprint Extra extension
-- Blueprint Extra exposes tracking data via MCP tools (e.g., `browser_get_interactions`, `browser_replay_click`)
-- v1-helper content scripts call Blueprint Extra's tracking API instead of implementing their own
-- v1-helper's background.js orchestrates V1-specific workflows using Blueprint Extra's generic browser automation
-
-### TODO: Coordinate with Blueprint Extra
-- [ ] Add interaction tracking to Blueprint Extra (click, keypress, DOM path, screenshot, network)
-- [ ] Add MCP tools: `browser_get_interactions`, `browser_interaction_export`, `browser_replay_sequence`
-- [ ] v1-helper depends on Blueprint Extra being installed
-- [ ] v1-helper content scripts detect Blueprint Extra and use its tracking instead of own implementation
-
-## Relationship to recording-analyzer
-
-The `recording-analyzer` project handles meeting transcript analysis and the initial POC report generation. The `v1-helper` extension is the productized version of the container security report — instead of a standalone HTML file, it lives inside V1 itself.
-
-The analysis logic (classifier.js, customer-context.json) is shared between both projects.
+| Data | Endpoint |
+|------|----------|
+| Clusters | `/v3.0/containerSecurity/kubernetesClusters` |
+| Vulnerabilities | `/v3.0/containerSecurity/vulnerabilities` |
+| Image Occurrences | `/v3.0/containerSecurity/kubernetesImageOccurrences` |
+| Eval Events | `/v3.0/containerSecurity/kubernetesEvaluationEventLogs` |
+| Sensor Events | `/v3.0/containerSecurity/kubernetesSensorEventLogs` |
+| XDR Search | `/v3.0/search/containerActivities` (TMV1-Query header) |
 
 ## Git / GitHub
 
 - Account: grobomo (public, generic tool)
-- No customer data, no PII, no internal infra details in the repo
-- Customer context files are gitignored
+- No customer data, no PII, no API keys in the repo
+- `customers/` and `reports/` are gitignored
