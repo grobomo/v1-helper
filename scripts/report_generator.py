@@ -1120,7 +1120,10 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <div class="section" data-section="vulns">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
-<p><strong>Total:</strong> {total} | <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+<p style="margin:0"><strong>Total:</strong> {total} | <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
+<a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/sase" target="_blank" style="text-decoration:none;margin-left:auto">Open in V1</a>
+</div>
 <p><em>Each CVE has an analysis row below it explaining relevance to your <strong>{env_label}</strong> environment.</em></p>
 <table>
   <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th></tr>
@@ -1133,6 +1136,10 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <div class="section" data-section="events">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+<p style="margin:0">{len(eval_events or [])} evaluation events, {len(sensor_events or [])} sensor events</p>
+<a class="export-btn" href="https://portal.xdr.trendmicro.com/index.html#/app/server-cloud/container-inventory" target="_blank" style="text-decoration:none;margin-left:auto">Open in V1</a>
+</div>
 {build_events_html(eval_events or [], sensor_events or [], xdr_results)}
   </div>
 </div>
