@@ -502,10 +502,21 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
                 raw_inner += '</table></div>'
             elif xdr_results:
                 raw_inner += '<div class="xdr-results"><span class="xdr-label">XDR Results: No container activity telemetry indexed yet. Runtime sensor telemetry typically takes 15-60 min to appear in XDR search.</span></div>'
-        # Eval API curl
+        # Eval API curl — filtered to this cluster+namespace
+        eval_curl = f'curl -s -H "Authorization: Bearer YOUR_API_KEY" "{api_url}?limit=100" | jq \'.items[] | select(.clusterName=="{cluster}" and .namespace=="{namespace}")\''
+        copy_id += 1
         raw_inner += f"""<div class="xdr-query-box" style="margin-bottom:8px">
-<span class="xdr-label">Eval API:</span>
-<code id="api-{copy_id}">curl -s -H "Authorization: Bearer YOUR_API_KEY" "{api_url}"</code>
+<span class="xdr-label">Eval API (filtered):</span>
+<code id="api-{copy_id}">{eval_curl}</code>
+<button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('api-{copy_id}').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='&#x2398;',1200)" title="Copy to clipboard">&#x2398;</button>
+</div>"""
+        # XDR container activity search curl — needs TMV1-Query header
+        if xdr_q:
+            copy_id += 1
+            xdr_curl = f'curl -s -H "Authorization: Bearer YOUR_API_KEY" -H \'TMV1-Query: clusterName:{cluster} and k8sNamespace:{namespace}\' "https://api.xdr.trendmicro.com/v3.0/search/containerActivities?top=50"'
+            raw_inner += f"""<div class="xdr-query-box" style="margin-bottom:8px">
+<span class="xdr-label">XDR Search API:</span>
+<code id="api-{copy_id}">{html_mod.escape(xdr_curl)}</code>
 <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('api-{copy_id}').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='&#x2398;',1200)" title="Copy to clipboard">&#x2398;</button>
 </div>"""
         # Raw JSON
