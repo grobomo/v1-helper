@@ -141,10 +141,93 @@ def enrich(vulns, clusters, occurrences):
 # Claude analysis
 # ============================================================
 
-def load_customer_context():
+def generate_customer_context(clusters, vulns, occurrences):
+    """Auto-generate customer-context.md from V1 API data on first run."""
+    # Gather facts from API data
+    cluster_names = [c.get("name", "?") for c in clusters]
+    orchestrators = sorted({c.get("orchestrator", "?") for c in clusters})
+    node_names = []
+    node_os = set()
+    for c in clusters:
+        for n in c.get("nodes", []):
+            node_names.append(n.get("name", "?"))
+
+    # Images and registries
+    registries = sorted({v.get("registry", "") for v in vulns if v.get("registry")})
+    repositories = sorted({v.get("repository", "") for v in vulns if v.get("repository")})
+
+    # Namespaces and workloads from occurrences
+    namespaces = sorted({o.get("namespace", "") for o in occurrences if o.get("namespace")})
+    workloads = []
+    for o in occurrences:
+        rtype = o.get("resourceType", "")
+        rname = o.get("resourceName", "")
+        cname = o.get("containerName", "")
+        img = o.get("repository", "")
+        if rname:
+            workloads.append(f"{rtype}: {rname} (container: {cname}, image: {img})")
+
+    # Package types found
+    pkg_types = set()
+    for v in vulns:
+        for p in v.get("packages", []):
+            if p.get("type"):
+                pkg_types.add(p["type"])
+
+    ctx = f"""# Customer Environment Context
+# Auto-generated from V1 API data on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}
+# REVIEW AND EDIT — analysis quality depends on this being accurate.
+
+## Clusters
+{chr(10).join(f'- **{name}**' for name in cluster_names)}
+
+## Orchestrator
+{', '.join(orchestrators)}
+# TODO: Specify if managed (EKS, ECS, GKE, AKS) or self-managed.
+# This affects kernel vulnerability relevance — managed services run
+# their own host kernel, so container kernel packages are not loaded.
+
+## Nodes
+{chr(10).join(f'- {name}' for name in node_names) or '- (no node data)'}
+
+## Container Registries
+{chr(10).join(f'- `{r}`' for r in registries) or '- (none detected)'}
+
+## Deployed Images
+{chr(10).join(f'- `{r}`' for r in repositories) or '- (none detected)'}
+
+## Namespaces
+{', '.join(f'`{ns}`' for ns in namespaces) or '(none detected)'}
+
+## Workloads
+{chr(10).join(f'- {w}' for w in workloads) or '- (none detected)'}
+
+## Package Types in Images
+{', '.join(sorted(pkg_types)) or '(none detected)'}
+
+## What To Add Manually
+- Container runtime: EKS / ECS / GKE / AKS / self-managed / other
+- Host OS: Amazon Linux 2, Ubuntu, etc. (affects kernel vuln relevance)
+- What the workloads actually do (nginx reverse proxy, API server, etc.)
+- Which packages are used at runtime vs transitive base image deps
+- Known accepted risks or exceptions
+- Team structure: who handles dev, SRE, security
+"""
+    return ctx
+
+
+def load_customer_context(clusters=None, vulns=None, occurrences=None):
     p = REPORTS_DIR / "customer-context.md"
     if p.exists():
         return p.read_text()
+    # Auto-generate on first run if we have API data
+    if clusters and vulns and occurrences:
+        print("  No customer-context.md found — generating from V1 API data...")
+        ctx = generate_customer_context(clusters, vulns, occurrences)
+        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        p.write_text(ctx)
+        print(f"  Wrote {p} — review and edit for accurate analysis")
+        return ctx
     return "No customer context file found. Analyze based on general container security best practices."
 
 
@@ -1202,7 +1285,7 @@ def main():
             print(f"  {len(analyses)} analyses loaded")
     elif not args.skip_llm:
         print("Running Claude analysis...")
-        customer_ctx = load_customer_context()
+        customer_ctx = load_customer_context(clusters, vulns, occurrences)
         analyses = run_analysis(findings, customer_ctx, args.batch_size)
         if analyses:
             json.dump(analyses, open(analysis_file, "w"), indent=2)
@@ -1238,7 +1321,7 @@ def main():
 
     date = datetime.datetime.now().strftime('%Y-%m-%d')
     out = args.output or str(REPORTS_DIR / f"EP_Container_Security_{date}.html")
-    customer_ctx = load_customer_context()
+    customer_ctx = load_customer_context(clusters, vulns, occurrences)
     write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx)
     print(f"\nReport: {out}")
 
