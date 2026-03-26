@@ -1194,7 +1194,7 @@ if(location.hash)setTimeout(flashTarget,400);
 (function(){{
   const hint=document.getElementById('env-path-hint');
   if(location.protocol==='file:'){{
-    const dir=decodeURIComponent(location.pathname).replace(/\\/g,'/').split('/').slice(0,-1).join('/');
+    const dir=decodeURIComponent(location.pathname).replace(/\\\\/g,'/').split('/').slice(0,-1).join('/');
     hint.textContent='Save to: '+dir+'/customer-context.md';
   }}
 }})();
