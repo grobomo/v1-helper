@@ -303,7 +303,8 @@ Respond with a JSON array. Each element MUST have:
 - "cve": the exact CVE ID from the finding (e.g. "CVE-2019-1010022")
 - "relevant": "yes" | "no" | "low"
 - "action": one-sentence specific action item
-- "reasoning": 2-4 sentences explaining the specific vulnerability and why it does/doesn't matter here
+- "what": 1-2 sentences describing what this vulnerability IS (the technical flaw)
+- "why_relevant": 1-2 sentences explaining WHY it is or isn't relevant to THIS environment (reference specific packages, runtime behavior, kernel vs userspace)
 - "owner": who should act ("dev team" | "SRE" | "security" | "none")
 
 Return ONLY the JSON array, no other text."""
@@ -567,9 +568,10 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
             analysis_html += f'<span class="tag" style="background:{sev_colors.get("critical" if ev_rel=="yes" else "low","#eee")};color:{sev_text_c.get("critical" if ev_rel=="yes" else "low","#333")}">Relevant: {ev_rel.upper()}</span> '
             analysis_html += f'<span class="tag" style="background:{sev_colors.get(ev_sev,"#eee")};color:{sev_text_c.get(ev_sev,"#333")}">{ev_sev.upper()}</span> '
             analysis_html += f"<strong>{specific['title']}</strong>"
-            analysis_html += f"<div class='reasoning'>{specific['analysis']}</div>"
-            if specific.get("action"):
-                analysis_html += f"<div class='note' style='margin-top:6px'><strong>Recommended:</strong> {specific['action']}</div>"
+            analysis_html += f"""<div class="analysis-sections">
+  <div class="analysis-what"><span class="analysis-label">What happened:</span> {specific['analysis']}</div>
+  <div class="analysis-why"><span class="analysis-label">Why relevant:</span> {specific.get('action', '')}</div>
+</div>"""
 
             xdr_q = ctx.get("xdr_query", "").format(cluster=cluster, namespace=namespace)
 
@@ -849,6 +851,9 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
             rel_bg = rel_colors.get(relevant, "#eee")
             rel_fg = rel_text.get(relevant, "#333")
             action = analysis.get("action", "")
+            # Support both old (reasoning) and new (what + why_relevant) formats
+            what = analysis.get("what", "")
+            why_relevant = analysis.get("why_relevant", "")
             reasoning = analysis.get("reasoning", "")
             owner = analysis.get("owner", "")
 
@@ -858,7 +863,10 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     <span class="tag" style="background:{rel_bg};color:{rel_fg}">Relevant: {relevant.upper()}</span>
     <span class="owner-tag">{owner}</span>
     <strong>{action}</strong>
-    <div class="reasoning">{reasoning}</div>
+    <div class="analysis-sections">
+      <div class="analysis-what"><span class="analysis-label">What it is:</span> {what or reasoning}</div>
+      <div class="analysis-why"><span class="analysis-label">Why {'relevant' if relevant in ('yes','low') else 'not relevant'}:</span> {why_relevant or ''}</div>
+    </div>
   </div>
 </td>
 </tr>"""
@@ -985,6 +993,10 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .analysis-detail {{ font-size: 0.88em; line-height: 1.6; }}
   .analysis-detail strong {{ display: block; margin: 4px 0; color: var(--heading); }}
   .reasoning {{ color: var(--reasoning); margin-top: 4px; }}
+  .analysis-sections {{ margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }}
+  .analysis-label {{ font-weight: 700; font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.3px; color: var(--heading); margin-right: 4px; }}
+  .analysis-what {{ color: var(--fg); font-size: 0.9em; line-height: 1.5; }}
+  .analysis-why {{ color: var(--reasoning); font-size: 0.9em; line-height: 1.5; padding-left: 12px; border-left: 3px solid var(--border); }}
   .owner-tag {{ display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; background: var(--owner-bg); color: var(--owner-fg); margin-left: 4px; }}
   .xdr-query-box {{ margin-top: 8px; padding: 6px 10px; background: var(--code-bg); border-radius: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }}
   .xdr-query-box code {{ background: none; padding: 0; font-size: 0.82em; flex: 1; word-break: break-all; color: var(--fg); }}
