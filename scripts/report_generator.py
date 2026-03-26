@@ -33,10 +33,11 @@ REPORTS_DIR = PROJECT_ROOT / "reports"
 # ============================================================
 
 class V1:
-    def __init__(self, region="us-east-1"):
-        self.key = cred_resolve("v1-api/V1_API_KEY")
+    def __init__(self, region="us-east-1", api_key_name="v1-api/V1_API_KEY"):
+        self.key = cred_resolve(api_key_name)
         if not self.key:
-            raise RuntimeError("No v1-api/V1_API_KEY in credential store")
+            raise RuntimeError(f"No {api_key_name} in credential store. Run: python -c \"import sys; sys.path.insert(0,'~/.claude/skills/credential-manager'); from claude_cred import store; store('{api_key_name}', input('API Key: '))\"")
+        self.key = self.key.strip()
         bases = {
             "us-east-1": "https://api.xdr.trendmicro.com",
             "eu-central-1": "https://api.eu.xdr.trendmicro.com",
@@ -217,6 +218,23 @@ def generate_customer_context(clusters, vulns, occurrences):
 
 
 CUSTOMERS_DIR = PROJECT_ROOT / "customers"
+
+
+def load_customer_config(customer="demo"):
+    """Load customer config (API key name, region) from customers/<name>.json.
+    Auto-creates a default config on first run."""
+    p = CUSTOMERS_DIR / f"{customer}.json"
+    if p.exists():
+        return json.load(open(p))
+    # Default config
+    config = {
+        "api_key_name": f"v1-api/{customer.upper()}_API_KEY",
+        "region": "us-east-1",
+    }
+    CUSTOMERS_DIR.mkdir(parents=True, exist_ok=True)
+    json.dump(config, open(str(p), "w"), indent=2)
+    print(f"  Created {p} — edit api_key_name and region as needed")
+    return config
 
 
 def load_customer_context(customer="demo", clusters=None, vulns=None, occurrences=None):
@@ -1384,14 +1402,20 @@ function exportPDF(){{
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--region", default="us-east-1")
+    parser.add_argument("--region", default=None, help="Override V1 region (default: from customer config)")
     parser.add_argument("--skip-llm", action="store_true", help="Skip Claude analysis")
     parser.add_argument("--batch-size", type=int, default=15)
     parser.add_argument("--output", help="Output HTML path")
-    parser.add_argument("--customer", default="demo", help="Customer name (loads customers/<name>.md)")
+    parser.add_argument("--customer", default="demo", help="Customer name (loads customers/<name>.json + .md)")
     parser.add_argument("--cached", help="Use cached V1 data JSON instead of live API")
     parser.add_argument("--analysis", help="Pre-computed analysis JSON file")
     args = parser.parse_args()
+
+    # Load customer config (API key, region)
+    cust_config = load_customer_config(args.customer)
+    region = args.region or cust_config.get("region", "us-east-1")
+    api_key_name = cust_config.get("api_key_name", "v1-api/V1_API_KEY")
+    print(f"Customer: {args.customer} | Region: {region} | API key: {api_key_name}")
 
     eval_events = []
     sensor_events = []
@@ -1406,16 +1430,18 @@ def main():
         sensor_events = cached.get("sensor_events", [])
     else:
         print("Pulling V1 data...")
-        api = V1(args.region)
+        api = V1(region, api_key_name)
         clusters = api.clusters()
         vulns = api.vulns()
         occurrences = api.image_occ()
         eval_events = api.eval_events()
         sensor_events = api.sensor_events()
-        # Cache for next time
+        # Cache per customer
+        cache_path = REPORTS_DIR / f"{args.customer}-raw-data.json"
         json.dump({"clusters": clusters, "vulns": vulns, "occurrences": occurrences,
                    "eval_events": eval_events, "sensor_events": sensor_events},
-                  open(str(REPORTS_DIR / "v1-raw-data.json"), "w"))
+                  open(str(cache_path), "w"))
+        print(f"  Cached to {cache_path}")
     print(f"  {len(clusters)} clusters, {len(vulns)} vulns, {len(occurrences)} image occurrences")
 
     print("Enriching with K8s context...")
@@ -1450,7 +1476,7 @@ def main():
     xdr_results = {}
     if not args.cached:
         print("Running XDR queries for runtime events...")
-        api_for_xdr = V1(args.region)
+        api_for_xdr = V1(region, api_key_name)
         seen_queries = set()
         for e in eval_events:
             cluster = e.get("clusterName", "")
@@ -1475,7 +1501,7 @@ def main():
         print("Skipping XDR queries (using cached data)")
 
     date = datetime.datetime.now().strftime('%Y-%m-%d')
-    out = args.output or str(REPORTS_DIR / f"EP_Container_Security_{date}.html")
+    out = args.output or str(REPORTS_DIR / f"{args.customer}_Container_Security_{date}.html")
     customer_ctx = load_customer_context(args.customer, clusters, vulns, occurrences)
     if analyses:
         print("Generating relevance reasoning from customer context...")
