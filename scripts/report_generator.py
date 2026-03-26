@@ -148,25 +148,44 @@ def generate_customer_context(clusters, vulns, occurrences):
     cluster_names = [c.get("name", "?") for c in clusters]
     orchestrators = sorted({c.get("orchestrator", "?") for c in clusters})
     node_names = []
-    node_os = set()
     for c in clusters:
         for n in c.get("nodes", []):
             node_names.append(n.get("name", "?"))
+
+    # Detect platform from orchestrator + node names + cluster names
+    orch_str = ", ".join(orchestrators)
+    is_eks = "eks" in orch_str.lower() or any("eks" in c.lower() for c in cluster_names)
+    is_gke = "gke" in orch_str.lower() or any("gke" in c.lower() for c in cluster_names)
+    is_aks = "aks" in orch_str.lower() or any("aks" in c.lower() for c in cluster_names)
+    is_aws = is_eks or any(".compute.internal" in n for n in node_names) or any("ecr" in v.get("registry","") for v in vulns)
+    managed = is_eks or is_gke or is_aks
+
+    if is_eks: platform = "Amazon EKS (managed Kubernetes on AWS)"
+    elif is_gke: platform = "Google GKE (managed Kubernetes on GCP)"
+    elif is_aks: platform = "Azure AKS (managed Kubernetes on Azure)"
+    elif managed: platform = f"{orch_str} (managed)"
+    else: platform = f"{orch_str}"
+
+    host_kernel = "Amazon Linux 2/2023 (managed by AWS)" if is_aws else "managed by cloud provider" if managed else "managed by customer"
 
     # Images and registries
     registries = sorted({v.get("registry", "") for v in vulns if v.get("registry")})
     repositories = sorted({v.get("repository", "") for v in vulns if v.get("repository")})
 
-    # Namespaces and workloads from occurrences
+    # Namespaces and workloads from occurrences — deduplicated
     namespaces = sorted({o.get("namespace", "") for o in occurrences if o.get("namespace")})
+    seen_workloads = set()
     workloads = []
     for o in occurrences:
         rtype = o.get("resourceType", "")
         rname = o.get("resourceName", "")
         cname = o.get("containerName", "")
         img = o.get("repository", "")
-        if rname:
-            workloads.append(f"{rtype}: {rname} (container: {cname}, image: {img})")
+        ns = o.get("namespace", "")
+        key = f"{ns}/{rtype}/{rname}"
+        if rname and key not in seen_workloads:
+            seen_workloads.add(key)
+            workloads.append(f"{rtype}: {rname} (container: {cname}, image: {img}, namespace: {ns})")
 
     # Package types found
     pkg_types = set()
@@ -177,42 +196,32 @@ def generate_customer_context(clusters, vulns, occurrences):
 
     ctx = f"""# Customer Environment Context
 # Auto-generated from V1 API data on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}
-# REVIEW AND EDIT — analysis quality depends on this being accurate.
+
+## Platform
+- **{platform}**
+- Host kernel: {host_kernel}
+- Kernel CVEs in container images are {"NOT exploitable — host kernel is managed by the cloud provider" if managed else "potentially relevant — host kernel is customer-managed"}
 
 ## Clusters
 {chr(10).join(f'- **{name}**' for name in cluster_names)}
 
-## Orchestrator
-{', '.join(orchestrators)}
-# TODO: Specify if managed (EKS, ECS, GKE, AKS) or self-managed.
-# This affects kernel vulnerability relevance — managed services run
-# their own host kernel, so container kernel packages are not loaded.
-
-## Nodes
-{chr(10).join(f'- {name}' for name in node_names) or '- (no node data)'}
+## Nodes ({len(node_names)})
+{chr(10).join(f'- {name}' for name in node_names[:10]) or '- (no node data)'}{"" if len(node_names) <= 10 else chr(10) + f'- ...and {len(node_names)-10} more'}
 
 ## Container Registries
 {chr(10).join(f'- `{r}`' for r in registries) or '- (none detected)'}
 
-## Deployed Images
+## Deployed Images ({len(repositories)})
 {chr(10).join(f'- `{r}`' for r in repositories) or '- (none detected)'}
 
 ## Namespaces
 {', '.join(f'`{ns}`' for ns in namespaces) or '(none detected)'}
 
-## Workloads
+## Workloads ({len(workloads)})
 {chr(10).join(f'- {w}' for w in workloads) or '- (none detected)'}
 
 ## Package Types in Images
 {', '.join(sorted(pkg_types)) or '(none detected)'}
-
-## What To Add Manually
-- Container runtime: EKS / ECS / GKE / AKS / self-managed / other
-- Host OS: Amazon Linux 2, Ubuntu, etc. (affects kernel vuln relevance)
-- What the workloads actually do (nginx reverse proxy, API server, etc.)
-- Which packages are used at runtime vs transitive base image deps
-- Known accepted risks or exceptions
-- Team structure: who handles dev, SRE, security
 """
     return ctx
 
