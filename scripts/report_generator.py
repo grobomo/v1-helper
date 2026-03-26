@@ -1039,7 +1039,8 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .theme-toggle input:checked ~ .thumb {{ transform: translateX(16px); }}
   .theme-toggle svg {{ width: 14px; height: 14px; stroke: var(--meta); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }}
   /* Floating toolbar */
-  .toolbar {{ position: sticky; top: 0; z-index: 200; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 8px 12px; background: var(--toolbar-bg); border-bottom: 1px solid var(--border); margin: -20px -20px 20px; box-shadow: 0 1px 4px var(--shadow); }}
+  .toolbar {{ position: sticky; top: 0; z-index: 200; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 8px 12px; background: var(--toolbar-bg); border-bottom: 1px solid var(--border); margin: -20px -20px 20px; box-shadow: 0 2px 8px var(--shadow); }}
+  .toolbar::before {{ content: ''; position: absolute; top: -20px; left: 0; right: 0; height: 20px; background: var(--bg); }}
   .font-ctrl {{ display: flex; align-items: center; gap: 2px; }}
   .font-btn {{ width: 22px; height: 22px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg2); color: var(--fg); font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.15s; }}
   .font-btn:hover {{ background: var(--heading); color: var(--th-fg); }}
