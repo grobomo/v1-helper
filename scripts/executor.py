@@ -24,10 +24,19 @@ import json
 import argparse
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CUSTOMERS_DIR = PROJECT_ROOT / "customers"
 
 # Add credential-manager to path
 sys.path.insert(0, os.path.expanduser("~/.claude/skills/credential-manager"))
+
+
+def load_customer_config(customer="demo"):
+    """Load customer config from customers/<name>.json."""
+    p = CUSTOMERS_DIR / f"{customer}.json"
+    if p.exists():
+        return json.load(open(p))
+    return {"api_key_name": "v1-api/V1_API_KEY", "region": "us-east-1"}
 
 from v1_api import V1API
 from v1_reader import detect_v1_page, get_scrape_js
@@ -89,12 +98,17 @@ def cmd_analyze(args):
 
 def cmd_report(args):
     """Generate HTML report from V1 API data."""
-    if args.cached and (PROJECT_ROOT / "v1-data-cache.json").exists():
-        print("Loading cached V1 data...")
-        data = json.load(open(PROJECT_ROOT / "v1-data-cache.json"))
+    config = load_customer_config(args.customer)
+    region = args.region or config.get("region", "us-east-1")
+    api_key = config.get("api_key_name", "v1-api/V1_API_KEY")
+    cache_path = PROJECT_ROOT / "reports" / f"{args.customer}-raw-data.json"
+
+    if args.cached and cache_path.exists():
+        print(f"Loading cached V1 data from {cache_path}...")
+        data = json.load(open(cache_path))
     else:
-        print("Pulling V1 API data...")
-        api = V1API(args.region)
+        print(f"Pulling V1 API data (customer: {args.customer}, key: {api_key})...")
+        api = V1API(region, api_key)
         data = api.pull_all()
 
     for k, v in data.items():
@@ -148,7 +162,8 @@ def cmd_dismiss(args):
 
 def main():
     parser = argparse.ArgumentParser(description="V1 Helper — Vision One analysis skill")
-    parser.add_argument("--region", default="us-east-1")
+    parser.add_argument("--region", default=None, help="Override V1 region (default: from customer config)")
+    parser.add_argument("--customer", default="demo", help="Customer name (loads customers/<name>.json)")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("analyze", help="Full pipeline: read + enrich + analyze + overlay")

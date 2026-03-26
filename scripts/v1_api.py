@@ -14,10 +14,11 @@ from claude_cred import resolve as cred_resolve
 
 
 class V1API:
-    def __init__(self, region="us-east-1"):
-        self.key = cred_resolve("v1-api/V1_API_KEY")
+    def __init__(self, region="us-east-1", api_key_name="v1-api/V1_API_KEY"):
+        self.key = cred_resolve(api_key_name)
         if not self.key:
-            raise RuntimeError("No v1-api/V1_API_KEY in credential store")
+            raise RuntimeError(f"No {api_key_name} in credential store")
+        self.key = self.key.strip()
         bases = {
             "us-east-1": "https://api.xdr.trendmicro.com",
             "eu-central-1": "https://api.eu.xdr.trendmicro.com",
