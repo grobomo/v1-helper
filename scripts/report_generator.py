@@ -309,6 +309,63 @@ VIOLATION_CONTEXT = {
 }
 
 
+def _analyze_event(vtype, commands, images, objects, cluster, namespace):
+    """Generate specific analysis for a runtime/policy event based on actual data."""
+    if vtype == "podexec" and commands:
+        cmd = commands[0]
+        if "useradd" in cmd or "adduser" in cmd:
+            user = cmd.split()[-1] if cmd.split() else "unknown"
+            return {
+                "title": f"User creation detected: <code>{cmd}</code>",
+                "analysis": f"A new user account <code>{user}</code> was created inside a running container. In production, containers should be immutable — user creation suggests either: (1) an attacker establishing persistence after initial access (MITRE T1136.001), (2) a misconfigured entrypoint script, or (3) debugging activity. On EKS/ECS, container user changes are ephemeral (lost on restart), but an attacker could use the new account to escalate privileges or evade detection during the current container lifetime.",
+                "action": f"Verify who ran <code>kubectl exec</code> — check RBAC audit logs for exec permissions on namespace <code>{namespace}</code>. If unauthorized, investigate the source IP and user identity. Consider switching from LogOnlyPolicy to an enforcement policy that blocks podExec in production namespaces.",
+            }
+        elif "shadow" in cmd or "/etc/passwd" in cmd:
+            return {
+                "title": f"Sensitive file access: <code>{cmd}</code>",
+                "analysis": f"Reading <code>/etc/shadow</code> is a credential harvesting technique (MITRE T1003.008). In containers, /etc/shadow contains hashed passwords for system accounts in the base image. While these are typically non-functional service accounts, an attacker may attempt to crack them or use the access pattern to test what other sensitive files are readable. This is a common post-exploitation reconnaissance step.",
+                "action": f"Check if the container runs as root (it shouldn't). Implement read-only root filesystem (<code>readOnlyRootFilesystem: true</code>) in the pod security context. Monitor for follow-up activity: if shadow read is followed by network connections or data exfiltration, treat as active compromise.",
+            }
+        elif "apt" in cmd or "yum" in cmd or "apk" in cmd:
+            return {
+                "title": f"Package manager execution: <code>{cmd}</code>",
+                "analysis": f"Running a package manager inside a container at runtime indicates either: (1) an attacker installing tools for lateral movement, exfiltration, or persistence (MITRE T1059.004), (2) a developer debugging, or (3) a poorly built image that installs packages at startup. In production containers on EKS/ECS, packages should be baked into the image at build time. Runtime package installation bypasses vulnerability scanning (TMAS) and introduces unvetted code.",
+                "action": f"Block package manager execution via Container Security runtime rules (or OPA/Gatekeeper policies). Ensure images are built with all dependencies and package managers are removed or disabled in the final image layer. If this was debugging, use ephemeral debug containers (<code>kubectl debug</code>) instead.",
+            }
+        elif "curl" in cmd or "wget" in cmd:
+            target = cmd.split()[-1] if cmd.split() else "unknown"
+            return {
+                "title": f"Outbound HTTP request: <code>{cmd}</code>",
+                "analysis": f"An outbound HTTP connection to <code>{target}</code> was initiated from inside the container. This could be: (1) legitimate application behavior, (2) C2 callback to an attacker-controlled server (MITRE T1071.001), (3) data exfiltration, or (4) downloading additional tools. On EKS/ECS, outbound traffic should be restricted via Network Policies or security groups. The target <code>{target}</code> should be verified against expected application dependencies.",
+                "action": f"Review whether <code>{target}</code> is an expected dependency. Implement Kubernetes NetworkPolicy to restrict egress to known-good destinations. If unexpected, capture full network context: DNS resolution, response size, timing pattern. Check for data in the request body.",
+            }
+        else:
+            return {
+                "title": f"Command executed in pod: <code>{cmd}</code>",
+                "analysis": f"A command was executed inside a running container via kubectl exec or equivalent. Any interactive access to production containers should be audited. The command <code>{cmd}</code> should be reviewed in the context of normal operational procedures for this workload.",
+                "action": f"Review RBAC audit logs to identify who executed this command. If this is routine debugging, consider implementing break-glass procedures with time-limited access and mandatory logging.",
+            }
+    elif vtype == "unscannedImage" and images:
+        img = images[0]
+        obj = objects[0] if objects else "?"
+        return {
+            "title": f"Unscanned image deployed: <code>{img}</code>",
+            "analysis": f"Container image <code>{img}</code> was deployed to pod <code>{obj}</code> without passing through vulnerability scanning. This means the image bypassed the CI/CD security pipeline — it could contain known CVEs, malware, embedded secrets, or supply-chain compromises. On EKS/ECS, images should be scanned by TMAS (Trend Micro Artifact Scanner) in the CI/CD pipeline before deployment, and admission control should block unscanned images.",
+            "action": f"Configure Container Security admission control to <b>block</b> unscanned images (currently set to log-only). Integrate TMAS scanning into your CI/CD pipeline: <code>tmas scan docker:{img}</code>. For existing deployments, trigger a manual scan from the V1 console. Consider using a private registry with mandatory scan policies.",
+        }
+    elif vtype == "unscannedImage":
+        return {
+            "title": "Unscanned image deployed",
+            "analysis": "A container image was deployed without being scanned for vulnerabilities. This bypasses the security scanning pipeline and introduces unknown risk.",
+            "action": "Enable admission control to block unscanned images. Integrate TMAS scanning into CI/CD.",
+        }
+    else:
+        ctx = VIOLATION_CONTEXT.get(vtype, {})
+        if isinstance(ctx, dict):
+            return {"title": ctx.get("analysis", f"Policy violation: {vtype}"), "analysis": ctx.get("action", ""), "action": ""}
+        return {"title": str(ctx), "analysis": "", "action": ""}
+
+
 def build_events_html(eval_events, sensor_events, xdr_results=None):
     """Build HTML section for non-CVE runtime detections with analysis and XDR queries."""
     if not eval_events and not sensor_events:
@@ -344,16 +401,29 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 <td>{e.get("policyName","?")}</td>
 </tr>"""
 
-        # Build analysis row with context and XDR query
+        # Build analysis row with event-specific context and XDR query
+        # Extract commands from resources for specific analysis
+        commands = []
+        images = []
+        objects = []
+        for v in e.get("violationReasons", []):
+            for r in v.get("resources", []):
+                if r.get("command"): commands.append(r["command"])
+                if r.get("image"): images.append(r["image"])
+                if r.get("object"): objects.append(r["object"])
+
         analysis_html = ""
         for vtype in violations:
             ctx = VIOLATION_CONTEXT.get(vtype, {"analysis": f"Policy violation: {vtype}", "action": "Review in V1.", "xdr_query": ""})
             if isinstance(ctx, str):
                 ctx = {"analysis": ctx, "action": "", "xdr_query": ""}
 
-            analysis_html += f"<strong>{ctx['analysis']}</strong>"
-            if ctx.get("action"):
-                analysis_html += f"<br>{ctx['action']}"
+            # Event-specific analysis based on actual command/image
+            specific = _analyze_event(vtype, commands, images, objects, cluster, namespace)
+            analysis_html += f"<strong>{specific['title']}</strong>"
+            analysis_html += f"<div class='reasoning'>{specific['analysis']}</div>"
+            if specific.get("action"):
+                analysis_html += f"<div class='note' style='margin-top:6px'><strong>Recommended:</strong> {specific['action']}</div>"
 
             xdr_q = ctx.get("xdr_query", "").format(cluster=cluster, namespace=namespace)
             if xdr_q:
@@ -382,7 +452,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
                         analysis_html += f'<tr><td colspan="6" style="text-align:center;font-style:italic">...and {len(hits)-10} more events. Run the query in V1 to see all.</td></tr>'
                     analysis_html += '</table></div>'
                 elif xdr_results:
-                    analysis_html += '<div class="xdr-results"><span class="xdr-label">XDR Results: No matching events found in search window.</span></div>'
+                    analysis_html += '<div class="xdr-results"><span class="xdr-label">XDR Results: No container activity telemetry indexed yet. Eval events come through the admission controller pipeline, not the XDR data lake. Runtime sensor telemetry typically takes 15-60 minutes to appear in XDR search after the event.</span></div>'
 
         if analysis_html:
             rows += f"""<tr class="analysis-row">
@@ -777,6 +847,24 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
 {build_events_html(eval_events or [], sensor_events or [], xdr_results)}
+  </div>
+</div>
+
+<h2>5. V1 API Reference</h2>
+<div class="section" data-section="api-ref">
+  <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
+  <div class="section-body">
+<p>Raw API calls used to generate this report. Replace <code>YOUR_API_KEY</code> with your V1 API key from <strong>Administration &gt; API Keys</strong>.</p>
+<table>
+  <tr><th>Data</th><th>API Call</th></tr>
+  <tr><td>Clusters</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesClusters"</code></td></tr>
+  <tr><td>Vulnerabilities</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/vulnerabilities?limit=200"</code></td></tr>
+  <tr><td>Image Occurrences</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesImageOccurrences"</code></td></tr>
+  <tr><td>Eval Events</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesEvaluationEventLogs"</code></td></tr>
+  <tr><td>Sensor Events</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesSensorEventLogs"</code></td></tr>
+  <tr><td>Container Activity (XDR)</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" -H 'TMV1-Query: clusterName:YOUR_CLUSTER' "https://api.xdr.trendmicro.com/v3.0/search/containerActivities?top=50"</code></td></tr>
+</table>
+<p>See <a href="https://automation.trendmicro.com/xdr/api-v3" target="_blank">V1 API Documentation</a> for full reference.</p>
   </div>
 </div>
 
