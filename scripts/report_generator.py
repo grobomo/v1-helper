@@ -897,7 +897,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
                 short = short[:117] + "..."
             crit_html += f"""<a class="crit-item" href="#{anchor}" title="Click to view details">
   <span class="tag" style="background:{sc};color:{st}">{ci['severity'].upper()}</span>
-  <span class="tag" style="background:var(--code-bg);color:var(--fg)">{ci['type']}</span>
+  <span class="tag" style="background:{'#0066cc' if ci['type']=='CVE' else '#6f42c1'};color:#fff">{ci['type']}</span>
   <span class="crit-pkg">{ci['package']}</span>
   <span class="crit-title">{short}</span>
 </a>"""
