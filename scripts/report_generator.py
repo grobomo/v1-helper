@@ -460,7 +460,7 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
         img = images[0]
         obj = objects[0] if objects else "?"
         return {
-            "severity": "high", "relevant": "yes",
+            "severity": "medium", "relevant": "yes",
             "title": f"Unscanned image deployed: <code>{img}</code>",
             "analysis": f"Container image <code>{img}</code> was deployed to pod <code>{obj}</code> without passing through vulnerability scanning. This means the image bypassed the CI/CD security pipeline — it could contain known CVEs, malware, embedded secrets, or supply-chain compromises. In managed Kubernetes environments,images should be scanned by TMAS (Trend Micro Artifact Scanner) in the CI/CD pipeline before deployment, and admission control should block unscanned images.",
             "action": f"Configure Container Security admission control to <b>block</b> unscanned images (currently set to log-only). Integrate TMAS scanning into your CI/CD pipeline: <code>tmas scan docker:{img}</code>. For existing deployments, trigger a manual scan from the V1 console. Consider using a private registry with mandatory scan policies.",
@@ -501,15 +501,17 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
         cluster = e.get("clusterName", "?")
         namespace = e.get("namespace", "?")
 
-        # Check if this event is critical for red border
-        _cmds = [r.get("command","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("command")]
-        _imgs = [r.get("image","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("image")]
-        _objs = [r.get("object","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("object")]
-        _evt_crit = any(
-            _analyze_event(vt, _cmds, _imgs, _objs, cluster, namespace).get("severity") in ("critical", "high")
-            for vt in violations
-        )
-        evt_crit_cls = ' class="crit-row"' if _evt_crit else ''
+        # Check if this specific event is critical for red border
+        # Use per-violation resources, not all resources merged together
+        _per_v = []
+        for v in e.get("violationReasons", []):
+            vt = v.get("type", "")
+            v_cmds = [r.get("command","") for r in v.get("resources",[]) if r.get("command")]
+            v_imgs = [r.get("image","") for r in v.get("resources",[]) if r.get("image")]
+            v_objs = [r.get("object","") for r in v.get("resources",[]) if r.get("object")]
+            _per_v.append(_analyze_event(vt, v_cmds, v_imgs, v_objs, cluster, namespace))
+        _evt_max_sev = max(({"critical":3,"high":2,"medium":1,"low":0}.get(ev.get("severity","low"),0) for ev in _per_v), default=0)
+        evt_crit_cls = ' class="crit-row"' if _evt_max_sev >= 2 else ''
 
         decision_color = "#44ff44" if e.get("decision") == "allow" else "#ff4444"
         rows += f"""<tr id="evt-{e_idx}"{evt_crit_cls} style="scroll-margin-top:50px">
@@ -985,19 +987,15 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   @keyframes target-flash {{ 0%,20% {{ background: rgba(240,192,64,0.25); }} 100% {{ background: inherit; }} }}
   tr.flash-target td, tr.flash-target + tr.analysis-row td {{ animation: target-flash 2s ease; }}
   /* Subtle border around each CVE/event row pair for visual separation */
-  tr[id^="cve-"] td, tr[id^="evt-"] td {{ border-top: 2px solid var(--border); }}
-  tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ border-left: 2px solid var(--border); }}
-  tr[id^="cve-"] td:last-child, tr[id^="evt-"] td:last-child {{ border-right: 2px solid var(--border); }}
-  tr[id^="cve-"] + tr.analysis-row td, tr[id^="evt-"] + tr.analysis-row td {{ border-bottom: 2px solid var(--border); }}
-  tr[id^="cve-"] + tr.analysis-row td:first-child, tr[id^="evt-"] + tr.analysis-row td:first-child {{ border-left: 2px solid var(--border); }}
-  tr[id^="cve-"] + tr.analysis-row td:last-child, tr[id^="evt-"] + tr.analysis-row td:last-child {{ border-right: 2px solid var(--border); }}
-  /* Red box around critical items — single rectangle around both rows */
-  tr.crit-row td {{ border-top: 2px solid #e94560; }}
-  tr.crit-row td:first-child {{ border-left: 2px solid #e94560; }}
-  tr.crit-row td:last-child {{ border-right: 2px solid #e94560; }}
-  tr.crit-row + tr.analysis-row td {{ border-bottom: 2px solid #e94560; }}
-  tr.crit-row + tr.analysis-row td:first-child {{ border-left: 2px solid #e94560; }}
-  tr.crit-row + tr.analysis-row td:last-child {{ border-right: 2px solid #e94560; }}
+  tr[id^="cve-"] td, tr[id^="evt-"] td {{ box-shadow: 0 -1px 0 var(--border) inset; }}
+  tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ box-shadow: 0 -1px 0 var(--border) inset, 1px 0 0 var(--border) inset; }}
+  tr[id^="cve-"] td:last-child, tr[id^="evt-"] td:last-child {{ box-shadow: 0 -1px 0 var(--border) inset, -1px 0 0 var(--border) inset; }}
+  tr[id^="cve-"] + tr.analysis-row td, tr[id^="evt-"] + tr.analysis-row td {{ box-shadow: 0 1px 0 var(--border) inset, 1px 0 0 var(--border) inset, -1px 0 0 var(--border) inset; }}
+  /* Red box around critical items — outline avoids border-separate gaps */
+  tr.crit-row td {{ box-shadow: 0 -2px 0 #e94560 inset, 0 0 0 0 transparent; }}
+  tr.crit-row td:first-child {{ box-shadow: 0 -2px 0 #e94560 inset, 2px 0 0 #e94560 inset; }}
+  tr.crit-row td:last-child {{ box-shadow: 0 -2px 0 #e94560 inset, -2px 0 0 #e94560 inset; }}
+  tr.crit-row + tr.analysis-row td {{ box-shadow: 0 2px 0 #e94560 inset, 2px 0 0 #e94560 inset, -2px 0 0 #e94560 inset; }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event summary {{ cursor: pointer; font-size: 0.8em; font-weight: 700; color: var(--fg); background: var(--code-bg); display: block; padding: 8px 12px; border-radius: 6px; text-align: center; letter-spacing: 0.3px; transition: background 0.15s; }}
