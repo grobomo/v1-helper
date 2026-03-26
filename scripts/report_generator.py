@@ -876,6 +876,13 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   tr:target, tr:target + tr.analysis-row {{ outline: 2px solid #f0c040; outline-offset: -2px; }}
   @keyframes target-flash {{ 0% {{ outline-color: #f0c040; }} 100% {{ outline-color: transparent; }} }}
   tr.flash-target, tr.flash-target + tr.analysis-row {{ animation: target-flash 2s ease forwards; }}
+  /* Subtle border around each CVE/event row pair for visual separation */
+  tr[id^="cve-"] td, tr[id^="evt-"] td {{ border-top: 2px solid var(--border); }}
+  tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ border-left: 2px solid var(--border); }}
+  tr[id^="cve-"] td:last-child, tr[id^="evt-"] td:last-child {{ border-right: 2px solid var(--border); }}
+  tr[id^="cve-"] + tr.analysis-row td, tr[id^="evt-"] + tr.analysis-row td {{ border-bottom: 2px solid var(--border); }}
+  tr[id^="cve-"] + tr.analysis-row td:first-child, tr[id^="evt-"] + tr.analysis-row td:first-child {{ border-left: 2px solid var(--border); }}
+  tr[id^="cve-"] + tr.analysis-row td:last-child, tr[id^="evt-"] + tr.analysis-row td:last-child {{ border-right: 2px solid var(--border); }}
   /* Red box around critical items — single rectangle around both rows */
   tr.crit-row td {{ border-top: 2px solid #e94560; }}
   tr.crit-row td:first-child {{ border-left: 2px solid #e94560; }}
