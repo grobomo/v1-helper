@@ -505,10 +505,6 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 <summary>Raw Event Data &amp; API</summary>
 <div class="raw-event-body">
 <div class="xdr-query-box" style="margin-bottom:8px">
-<span class="xdr-label">V1 API Used:</span>
-<code>GET {api_url}</code>
-</div>
-<div class="xdr-query-box" style="margin-bottom:8px">
 <span class="xdr-label">curl:</span>
 <code id="api-{copy_id}">curl -s -H "Authorization: Bearer YOUR_API_KEY" "{api_url}"</code>
 <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('api-{copy_id}').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='&#x2398;',1200)" title="Copy to clipboard">&#x2398;</button>
