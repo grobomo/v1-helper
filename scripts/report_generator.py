@@ -485,6 +485,20 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
         return ""
     xdr_results = xdr_results or {}
 
+    # Sort eval events by severity (critical/high first)
+    sev_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    def _event_severity(ev):
+        max_sev = 3
+        for v in ev.get("violationReasons", []):
+            vt = v.get("type", "")
+            v_cmds = [r.get("command","") for r in v.get("resources",[]) if r.get("command")]
+            v_imgs = [r.get("image","") for r in v.get("resources",[]) if r.get("image")]
+            v_objs = [r.get("object","") for r in v.get("resources",[]) if r.get("object")]
+            s = _analyze_event(vt, v_cmds, v_imgs, v_objs, ev.get("clusterName",""), ev.get("namespace","")).get("severity","low")
+            max_sev = min(max_sev, sev_rank.get(s, 3))
+        return max_sev
+    eval_events = sorted(eval_events, key=_event_severity)
+
     rows = ""
     copy_id = 0
     for e_idx, e in enumerate(eval_events):
