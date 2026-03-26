@@ -1378,7 +1378,7 @@ def main():
 
     date = datetime.datetime.now().strftime('%Y-%m-%d')
     out = args.output or str(REPORTS_DIR / f"EP_Container_Security_{date}.html")
-    customer_ctx = load_customer_context(clusters, vulns, occurrences)
+    customer_ctx = load_customer_context(args.customer, clusters, vulns, occurrences)
     write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx)
     print(f"\nReport: {out}")
 
