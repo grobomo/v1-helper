@@ -268,33 +268,24 @@ Running on: cluster={f['clusterName']}, namespace={f['namespace']}, resourceType
 Image: {f['repository']}
 """
 
-    prompt = f"""You are a container security analyst reviewing vulnerabilities found in container images.
-For EACH finding, determine if it's relevant to this customer's environment and what action to take.
+    prompt = f"""You are a container security analyst. For each CVE below, perform TWO separate analyses:
+
+STEP 1 — ANALYSIS (generic, factual):
+Describe what this vulnerability IS. What component is affected? What's the attack vector?
+What's the impact (DoS, code execution, info disclosure)? Is it disputed? Does a fix exist?
+Be specific — name the affected function/feature, not just the package.
+
+STEP 2 — RELEVANCE (environment-specific):
+Given the CUSTOMER CONTEXT below, decide if this CVE matters HERE. Consider:
+- Is the vulnerable package/function actually used at runtime in this workload?
+- Kernel vs userspace: containers share the host kernel, so kernel-level CVEs in container
+  base images are NOT exploitable. But userspace library functions (libc, libssl) ARE linked.
+- Is the package a transitive base image dependency that's never loaded?
+- What would an attacker need to exploit this? (local access, crafted input, network access)
+Do NOT repeat the analysis in the relevance section — only explain the environment-specific decision.
 
 CUSTOMER CONTEXT:
 {customer_context}
-
-CRITICAL ANALYSIS RULES:
-1. KERNEL vs USERSPACE distinction:
-   - Kernel CVEs (Linux kernel privilege escalation, memory management, namespace escape) are NOT exploitable from inside a container — containers share the HOST kernel (EKS runs Amazon Linux, ECS runs Amazon Linux 2). The container's base image kernel packages are never loaded.
-   - HOWEVER: userspace vulnerabilities in kernel-related packages (e.g. glibc ASLR info leak, libc string overflow) ARE relevant because the container links against its own libc.so/libpthread.so at runtime.
-   - Key test: does the CVE affect code that runs in userspace (libc functions, regex engine, DNS resolver) or kernel space (syscalls, memory layout, namespace isolation)?
-
-2. For EACH CVE you must:
-   - State the SPECIFIC vulnerability (not just "check if you use this package")
-   - Explain WHY it is or isn't relevant to THIS container based on the customer context
-   - If disputed/theoretical, cite that explicitly (e.g. "marked DISPUTED on NVD")
-   - Reference the actual CVE being analyzed, not a different one
-
-3. Package relevance for nginx container:
-   - nginx uses: openssl/gnutls (TLS), zlib (compression), pcre (regex), libc (everything)
-   - nginx does NOT typically use: libxml2, libxslt, sqlite, perl, apt, systemd, ldap, libheif, libtiff at runtime
-   - But libraries linked transitively still matter if the vulnerable function is reachable
-
-4. Be specific about exploitability:
-   - "Requires local access" + container = only via kubectl exec or RCE
-   - "Requires crafted input" = depends on what input the container processes
-   - "DoS only" vs "code execution" = very different risk levels
 
 FINDINGS:
 {findings_text}
@@ -302,9 +293,9 @@ FINDINGS:
 Respond with a JSON array. Each element MUST have:
 - "cve": the exact CVE ID from the finding (e.g. "CVE-2019-1010022")
 - "relevant": "yes" | "no" | "low"
-- "action": one-sentence specific action item
-- "what": 1-2 sentences describing what this vulnerability IS (the technical flaw)
-- "why_relevant": 1-2 sentences explaining WHY it is or isn't relevant to THIS environment (reference specific packages, runtime behavior, kernel vs userspace)
+- "action": one-sentence specific action item (what to do)
+- "reasoning": 2-4 sentences — the ANALYSIS (what this vulnerability is, technical details)
+- "relevance_reasoning": 1-2 sentences — the RELEVANCE decision (why it does/doesn't matter in THIS environment, referencing the customer context)
 - "owner": who should act ("dev team" | "SRE" | "security" | "none")
 
 Return ONLY the JSON array, no other text."""
@@ -863,6 +854,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     <span class="owner-tag">{owner}</span>
     <strong>{action}</strong>
     <div class="reasoning">{reasoning}</div>
+    <div class="reasoning" style="margin-top:4px"><strong style="color:var(--heading)">Relevance:</strong> {analysis.get('relevance_reasoning', '') or ('Relevant to this environment — see analysis above.' if relevant == 'yes' else 'Low priority — see analysis above.' if relevant == 'low' else 'Not relevant to this environment — see analysis above.')}</div>
   </div>
 </td>
 </tr>"""
