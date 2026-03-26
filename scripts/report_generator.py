@@ -919,7 +919,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <span class="crit-pkg">{ci['package']}</span>
   <span class="crit-title">{short}</span>
 </a>"""
-        critical_section = f"""<h2 style="color:#721c24;scroll-margin-top:50px">Needs Action</h2>
+        critical_section = f"""<h2 style="color:#721c24;scroll-margin-top:50px">Critical Findings</h2>
 <div class="section" data-section="critical">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
@@ -928,7 +928,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   </div>
 </div>"""
     else:
-        critical_section = """<h2 style="color:#155724;scroll-margin-top:50px">Needs Action</h2>
+        critical_section = """<h2 style="color:#155724;scroll-margin-top:50px">Critical Findings</h2>
 <div class="status-box" style="border-left:4px solid #155724">
   <span class="tag healthy">ALL CLEAR</span>
   <strong>No high-relevance, high-severity alerts found. Nice!</strong>
