@@ -876,9 +876,13 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   tr:target, tr:target + tr.analysis-row {{ outline: 2px solid #f0c040; outline-offset: -2px; }}
   @keyframes target-flash {{ 0% {{ outline-color: #f0c040; }} 100% {{ outline-color: transparent; }} }}
   tr.flash-target, tr.flash-target + tr.analysis-row {{ animation: target-flash 2s ease forwards; }}
-  /* Red box around critical items — data row + analysis row */
-  tr.crit-row td {{ border-color: #e94560; border-width: 2px; border-style: solid; border-bottom: none; }}
-  tr.crit-row + tr.analysis-row td {{ border-color: #e94560; border-width: 2px; border-style: solid; border-top: none; }}
+  /* Red box around critical items — single rectangle around both rows */
+  tr.crit-row td {{ border-top: 2px solid #e94560; }}
+  tr.crit-row td:first-child {{ border-left: 2px solid #e94560; }}
+  tr.crit-row td:last-child {{ border-right: 2px solid #e94560; }}
+  tr.crit-row + tr.analysis-row td {{ border-bottom: 2px solid #e94560; }}
+  tr.crit-row + tr.analysis-row td:first-child {{ border-left: 2px solid #e94560; }}
+  tr.crit-row + tr.analysis-row td:last-child {{ border-right: 2px solid #e94560; }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event summary {{ cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--meta); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 0; }}
   .raw-event summary:hover {{ color: var(--heading); }}
