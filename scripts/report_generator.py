@@ -217,7 +217,7 @@ def generate_customer_context(clusters, vulns, occurrences):
 
 
 def load_customer_context(clusters=None, vulns=None, occurrences=None):
-    p = REPORTS_DIR / "customer-context.md"
+    p = PROJECT_ROOT / "customer-context.md"
     if p.exists():
         return p.read_text()
     # Auto-generate on first run if we have API data
