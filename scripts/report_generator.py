@@ -216,15 +216,18 @@ def generate_customer_context(clusters, vulns, occurrences):
     return ctx
 
 
-def load_customer_context(clusters=None, vulns=None, occurrences=None):
-    p = PROJECT_ROOT / "customer-context.md"
+CUSTOMERS_DIR = PROJECT_ROOT / "customers"
+
+
+def load_customer_context(customer="demo", clusters=None, vulns=None, occurrences=None):
+    p = CUSTOMERS_DIR / f"{customer}.md"
     if p.exists():
         return p.read_text()
     # Auto-generate on first run if we have API data
     if clusters and vulns and occurrences:
-        print("  No customer-context.md found — generating from V1 API data...")
+        print(f"  No customers/{customer}.md found — generating from V1 API data...")
         ctx = generate_customer_context(clusters, vulns, occurrences)
-        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        CUSTOMERS_DIR.mkdir(parents=True, exist_ok=True)
         p.write_text(ctx)
         print(f"  Wrote {p} — review and edit for accurate analysis")
         return ctx
@@ -1287,6 +1290,7 @@ def main():
     parser.add_argument("--skip-llm", action="store_true", help="Skip Claude analysis")
     parser.add_argument("--batch-size", type=int, default=15)
     parser.add_argument("--output", help="Output HTML path")
+    parser.add_argument("--customer", default="demo", help="Customer name (loads customers/<name>.md)")
     parser.add_argument("--cached", help="Use cached V1 data JSON instead of live API")
     parser.add_argument("--analysis", help="Pre-computed analysis JSON file")
     args = parser.parse_args()
@@ -1338,7 +1342,7 @@ def main():
             print(f"  {len(analyses)} analyses loaded")
     elif not args.skip_llm:
         print("Running Claude analysis...")
-        customer_ctx = load_customer_context(clusters, vulns, occurrences)
+        customer_ctx = load_customer_context(args.customer, clusters, vulns, occurrences)
         analyses = run_analysis(findings, customer_ctx, args.batch_size)
         if analyses:
             json.dump(analyses, open(analysis_file, "w"), indent=2)
