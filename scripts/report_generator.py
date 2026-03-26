@@ -971,6 +971,15 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 </tr>"""
 
         # Full-width analysis row under CVE
+        if not analysis:
+            rows_html += f"""<tr class="analysis-row">
+<td colspan="10">
+  <div class="analysis-detail">
+    <span class="tag" style="background:#fff3cd;color:#856404">UNANALYZED</span>
+    <strong>No analysis available for this CVE. Run report without --skip-llm to generate.</strong>
+  </div>
+</td>
+</tr>"""
         if analysis:
             relevant = analysis.get("relevant", "?")
             rel_colors = {"yes": "#f8d7da", "no": "#d4edda", "low": "#fff3cd", "maybe": "#fff3cd"}
@@ -1070,6 +1079,8 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     # Count relevant CVEs and CVEs needing action
     relevant_count = sum(1 for f in findings if analysis_map.get(f["cve"], {}).get("relevant") in ("yes", "low"))
     need_action_count = sum(1 for ci in critical_items if ci["type"] == "CVE")
+    unanalyzed_cves = set(f["cve"] for f in findings) - set(analysis_map.keys())
+    unanalyzed_count = len(unanalyzed_cves)
 
     html = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
@@ -1267,7 +1278,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <div class="section" data-section="vulns">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
-<p><strong>Total:</strong> {total} | <strong>Relevant:</strong> {relevant_count} | <strong>Need action:</strong> {need_action_count}</p>
+<p><strong>Total:</strong> {total} | <strong>Relevant:</strong> {relevant_count} | <strong>Need action:</strong> {need_action_count}{"" if not unanalyzed_count else f' | <span style="color:#856404"><strong>Unanalyzed:</strong> {unanalyzed_count}</span>'}</p>
 <p>CVSS scores: <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
 <p><em>Each CVE has an analysis row below it. <span style="color:#e94560">Red border</span> = needs action.</em></p>
 <table>
