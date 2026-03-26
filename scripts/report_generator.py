@@ -1103,7 +1103,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     --warn-bg: #2a2200; --warn-border: #b38600; --owner-bg: #2a2a2a; --owner-fg: #ccc;
     --toolbar-bg: #1a1a1a; --shadow: rgba(0,0,0,0.3);
   }}
-  * {{ transition: background-color 0.2s, color 0.2s, border-color 0.2s; }}
+  .toolbar, .theme-toggle .track, .theme-toggle .thumb, .section-bar, .section-bar .chev, .section-bar .expand-label, .export-btn, .copy-btn, .crit-item, .font-btn {{ transition: background-color 0.2s, color 0.2s, border-color 0.2s; }}
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; background: var(--bg); color: var(--fg); font-size: var(--base-font, 18px); }}
   h1 {{ border-bottom: 3px solid #e94560; padding-bottom: 10px; }}
   h2 {{ color: var(--heading); margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 5px; scroll-margin-top: 50px; }}
@@ -1151,9 +1151,8 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .crit-pkg {{ font-weight: 700; font-size: 0.85em; min-width: 70px; }}
   .crit-title {{ font-size: 0.85em; color: var(--reasoning); }}
   /* Target highlight when jumping from critical findings */
-  /* Target highlight — flash row background yellow then revert */
-  @keyframes target-flash {{ 0%,20% {{ background: rgba(240,192,64,0.25); }} 100% {{ background: inherit; }} }}
-  tr.flash-target td, tr.flash-target + tr.analysis-row td {{ animation: target-flash 2s ease; }}
+  /* Target highlight — static yellow bg, removed by JS after 2s */
+  tr.flash-target td, tr.flash-target + tr.analysis-row td {{ background: rgba(240,192,64,0.25) !important; }}
   /* Row pair borders — data row: top+sides, analysis row: bottom+sides */
   tr[id^="cve-"] td, tr[id^="evt-"] td {{ box-shadow: inset 0 1px 0 var(--border); }}
   tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ box-shadow: inset 0 1px 0 var(--border), inset 1px 0 0 var(--border); }}
@@ -1175,7 +1174,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   li {{ margin: 4px 0; }}
   /* Collapsible sections */
   .section {{ display: flex; align-items: stretch; margin: 0 0 4px; }}
-  .section-bar {{ width: 18px; min-width: 18px; background: var(--border); border-radius: 4px 0 0 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 10px 0 16px; gap: 6px; transition: background 0.15s, width 0.2s, min-width 0.2s; flex-shrink: 0; user-select: none; }}
+  .section-bar {{ width: 18px; min-width: 18px; background: var(--border); border-radius: 4px 0 0 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 10px 0 16px; gap: 6px; flex-shrink: 0; user-select: none; }}
   .section-bar:hover {{ background: var(--heading); }}
   .section-bar:hover .chev {{ stroke: var(--th-fg); }}
   .section-bar:hover .expand-label {{ color: var(--th-fg); }}
@@ -1184,9 +1183,9 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .section-bar .expand-label {{ font-size: 0.65em; font-weight: 700; color: var(--meta); writing-mode: vertical-lr; text-orientation: mixed; letter-spacing: 1px; text-transform: uppercase; opacity: 0; transition: opacity 0.2s; pointer-events: none; }}
   .section.collapsed .section-bar {{ width: 28px; min-width: 28px; }}
   .section.collapsed .section-bar .expand-label {{ opacity: 1; }}
-  .section-body {{ flex: 1; min-width: 0; overflow: hidden; transition: max-height 0.3s ease, opacity 0.2s ease; }}
-  .section.collapsed .section-body {{ max-height: 0 !important; opacity: 0; padding: 0; }}
-  .section:not(.collapsed) .section-body {{ opacity: 1; overflow: visible; }}
+  .section-body {{ flex: 1; min-width: 0; }}
+  .section.collapsed .section-body {{ display: none; }}
+  .section:not(.collapsed) .section-body {{ display: block; }}
   /* Theme toggle */
   .theme-toggle {{ display: flex; align-items: center; gap: 6px; }}
   .theme-toggle label {{ position: relative; width: 36px; height: 20px; cursor: pointer; }}
@@ -1323,27 +1322,15 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <script>
 function toggleSection(bar) {{
   const sec = bar.parentElement;
-  const body = sec.querySelector('.section-body');
   if (sec.classList.contains('collapsed')) {{
-    body.style.maxHeight = body.scrollHeight + 'px';
     sec.classList.remove('collapsed');
-    setTimeout(() => body.style.maxHeight = 'none', 300);
   }} else {{
-    body.style.maxHeight = body.scrollHeight + 'px';
-    body.offsetHeight;
-    body.style.maxHeight = '0';
     sec.classList.add('collapsed');
-    // Scroll to the next section's h2 heading after collapse animation
-    setTimeout(() => {{
-      // Walk siblings after this .section to find the next h2
-      let el = sec.nextElementSibling;
-      while (el && el.tagName !== 'H2') el = el.nextElementSibling;
-      if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
-    }}, 310);
+    let el = sec.nextElementSibling;
+    while (el && el.tagName !== 'H2') el = el.nextElementSibling;
+    if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
   }}
 }}
-// Init: set max-height to none for all expanded sections
-document.querySelectorAll('.section-body').forEach(b => b.style.maxHeight = 'none');
 // Flash yellow border when jumping to target from critical findings
 function flashTarget(){{
   const id=location.hash.slice(1);if(!id)return;
