@@ -810,7 +810,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     # Group findings by image + k8s location
     groups = defaultdict(list)
     for f in findings:
-        key = (f["repository"], f["namespace"], f["resourceName"], f.get("labels", ""))
+        key = (f["clusterName"], f["repository"], f["namespace"], f["resourceName"], f.get("labels", ""))
         groups[key].append(f)
 
     # Build cluster overview
@@ -896,7 +896,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 
     # Build image group sections
     groups_html = ""
-    for (repo, ns, res_name, labels), group_findings in groups.items():
+    for (cluster_name, repo, ns, res_name, labels), group_findings in groups.items():
         sev_counts = defaultdict(int)
         for f in group_findings:
             sev_counts[f["severity"]] += 1
@@ -910,7 +910,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 
         groups_html += f"""
 <div class="status-box">
-  <h3><span class="tag medium">{len(group_findings)} CVEs</span> {repo}</h3>
+  <h3><span class="tag medium">{len(group_findings)} CVEs</span> {repo} <span style="font-size:0.75em;color:var(--meta);font-weight:400">on {cluster_name}</span></h3>
   <div class="grid">
     <div>
       <p class="kv"><strong>Registry:</strong> <code>{f0.get('registry','')}</code></p>
