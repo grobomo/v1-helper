@@ -568,10 +568,9 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
             analysis_html += f'<span class="tag" style="background:{sev_colors.get("critical" if ev_rel=="yes" else "low","#eee")};color:{sev_text_c.get("critical" if ev_rel=="yes" else "low","#333")}">Relevant: {ev_rel.upper()}</span> '
             analysis_html += f'<span class="tag" style="background:{sev_colors.get(ev_sev,"#eee")};color:{sev_text_c.get(ev_sev,"#333")}">{ev_sev.upper()}</span> '
             analysis_html += f"<strong>{specific['title']}</strong>"
-            analysis_html += f"""<div class="analysis-sections">
-  <div class="analysis-what"><span class="analysis-label">What happened:</span> {specific['analysis']}</div>
-  <div class="analysis-why"><span class="analysis-label">Why relevant:</span> {specific.get('action', '')}</div>
-</div>"""
+            analysis_html += f"<div class='reasoning'>{specific['analysis']}</div>"
+            if specific.get("action"):
+                analysis_html += f"<div class='note' style='margin-top:6px'><strong>Recommended:</strong> {specific['action']}</div>"
 
             xdr_q = ctx.get("xdr_query", "").format(cluster=cluster, namespace=namespace)
 
@@ -863,10 +862,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     <span class="tag" style="background:{rel_bg};color:{rel_fg}">Relevant: {relevant.upper()}</span>
     <span class="owner-tag">{owner}</span>
     <strong>{action}</strong>
-    <div class="analysis-sections">
-      <div class="analysis-what"><span class="analysis-label">What it is:</span> {what or reasoning}</div>
-      <div class="analysis-why"><span class="analysis-label">Why {'relevant' if relevant in ('yes','low') else 'not relevant'}:</span> {why_relevant or ''}</div>
-    </div>
+    <div class="reasoning">{reasoning}</div>
   </div>
 </td>
 </tr>"""
