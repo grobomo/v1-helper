@@ -67,10 +67,17 @@ class V1:
     def eval_events(self): return self._pages("/v3.0/containerSecurity/kubernetesEvaluationEventLogs")
     def sensor_events(self): return self._pages("/v3.0/containerSecurity/kubernetesSensorEventLogs")
     def audit_events(self): return self._pages("/v3.0/containerSecurity/kubernetesAuditEventLogs")
-    # Amazon ECS
-    def ecs_clusters(self): return self._pages("/v3.0/containerSecurity/amazonEcsClusters")
-    def ecs_image_occ(self): return self._pages("/v3.0/containerSecurity/amazonEcsImageOccurrences")
-    def ecs_sensor_events(self): return self._pages("/v3.0/containerSecurity/amazonEcsSensorEventLogs")
+    # Amazon ECS (fault-tolerant — V1 API sometimes 500s on pagination)
+    def _pages_safe(self, path, params=None):
+        try:
+            return self._pages(path, params, max_pages=1)
+        except Exception as e:
+            print(f"  Warning: {path} failed on pagination: {e}")
+            return []
+
+    def ecs_clusters(self): return self._pages_safe("/v3.0/containerSecurity/amazonEcsClusters")
+    def ecs_image_occ(self): return self._pages_safe("/v3.0/containerSecurity/amazonEcsImageOccurrences")
+    def ecs_sensor_events(self): return self._pages_safe("/v3.0/containerSecurity/amazonEcsSensorEventLogs")
 
     def xdr_container_search(self, query, top=50):
         """Search container activity data via XDR search API."""
