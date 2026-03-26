@@ -977,15 +977,15 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 </script>
 
 <h1>V1 Container Security Report</h1>
-<p><strong>Generated:</strong> {now.strftime('%Y-%m-%d %H:%M')} | <strong>Source:</strong> Vision One API + Claude Analysis | <strong>Environment:</strong> {env_label}</p>
+<p><strong>Generated:</strong> {now.strftime('%Y-%m-%d %H:%M')} | <strong>Source:</strong> Vision One API + Claude Analysis</p>
 
 <h2 style="scroll-margin-top:50px">Environment Context</h2>
-<div class="section collapsed" data-section="env-ctx">
+<div class="section" data-section="env-ctx">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
-  <div class="section-body" style="max-height:0;opacity:0">
+  <div class="section-body">
 <div class="status-box">
-  <p>The following environment context was used for all CVE relevance analysis and runtime event assessment. <strong>Review and correct if inaccurate</strong> — analysis quality depends on this being right.</p>
-  <pre class="raw-json" style="max-height:none">{html_mod.escape(customer_context)}</pre>
+  <p>Analysis assumptions based on <code>customer-context.md</code>. <strong>Review and correct if inaccurate.</strong></p>
+  <pre class="raw-json" style="max-height:300px">{html_mod.escape(customer_context)}</pre>
   <p class="meta" style="margin-top:8px;border:none">Edit <code>reports/customer-context.md</code> and re-run to update analysis for a different environment.</p>
 </div>
   </div>
