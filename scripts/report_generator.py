@@ -824,7 +824,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <td><code>{f["resourceName"]}</code></td>
 <td>{f.get("containerName","-")}</td>
 <td>{f["repository"]}</td>
-<td></td>
+<td style="text-align:center"><button class="copy-btn" onclick="navigator.clipboard.writeText('{cve}');this.textContent='Copied';setTimeout(()=>this.textContent='{cve}',1200)" title="Copy CVE ID" style="white-space:nowrap">{cve}</button></td>
 </tr>"""
 
         # Full-width analysis row under CVE
