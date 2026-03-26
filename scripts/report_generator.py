@@ -1087,6 +1087,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     <button class="export-btn" id="env-save-btn" style="display:none;background:var(--heading);color:var(--th-fg)" onclick="saveEnv()">Save to disk</button>
     <button class="export-btn" id="env-cancel-btn" style="display:none" onclick="cancelEditEnv()">Cancel</button>
     <span class="meta" style="border:none;margin:0" id="env-status"></span>
+    <span class="meta" style="border:none;margin:0;margin-left:auto" id="env-path-hint"></span>
   </div>
 </div>
   </div>
@@ -1189,6 +1190,14 @@ function flashTarget(){{
 window.addEventListener('hashchange',flashTarget);
 if(location.hash)setTimeout(flashTarget,400);
 // Environment context inline editor
+// Show expected save path based on where the HTML was opened from
+(function(){{
+  const hint=document.getElementById('env-path-hint');
+  if(location.protocol==='file:'){{
+    const dir=decodeURIComponent(location.pathname).replace(/\\/g,'/').split('/').slice(0,-1).join('/');
+    hint.textContent='Save to: '+dir+'/customer-context.md';
+  }}
+}})();
 function startEditEnv(){{
   document.getElementById('env-display').style.display='none';
   document.getElementById('env-editor').style.display='block';
@@ -1214,6 +1223,7 @@ async function saveEnv(){{
       const handle=await window.showSaveFilePicker({{suggestedName:'customer-context.md',types:[{{description:'Markdown',accept:{{'text/markdown':['.md']}}}}]}});
       const w=await handle.createWritable();await w.write(content);await w.close();
       status.textContent='Saved! Re-run report generator to update analysis.';status.style.color='#155724';
+      status.textContent+=' (Browser will remember this folder for next time)';
     }}else{{
       const blob=new Blob([content],{{type:'text/markdown'}});
       const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='customer-context.md';a.click();
