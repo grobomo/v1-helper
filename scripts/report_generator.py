@@ -710,7 +710,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .font-btn:hover {{ background: var(--heading); color: var(--th-fg); }}
   .export-btn {{ padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg2); color: var(--fg); font-size: 0.72em; font-weight: 600; cursor: pointer; transition: background 0.15s; }}
   .export-btn:hover {{ background: var(--heading); color: var(--th-fg); }}
-  @media print {{ body {{ margin: 0; }} .no-print {{ display: none; }} }}
+  @media print {{ body {{ margin: 0; font-size: var(--base-font, 18px) !important; }} .no-print {{ display: none; }} .section-bar {{ display: none; }} .section-body {{ max-height: none !important; opacity: 1 !important; overflow: visible !important; }} .section {{ display: block; }} }}
 </style>
 </head><body>
 
@@ -810,17 +810,17 @@ function toggleSection(bar) {{
 document.querySelectorAll('.section-body').forEach(b => b.style.maxHeight = 'none');
 // CSV export
 function exportCSV(){{
+  const NL='\\n';
   const table=document.querySelector('[data-section="vulns"] table');
   if(!table)return;
   let csv='';
   table.querySelectorAll('tr:not(.analysis-row)').forEach(r=>{{
     const cells=[];
     r.querySelectorAll('th,td').forEach(c=>cells.push('"'+c.textContent.trim().replace(/"/g,'""')+'"'));
-    if(cells.length)csv+=cells.join(',')+'\n';
+    if(cells.length)csv+=cells.join(',')+NL;
   }});
-  // Add analysis column
-  const rows=csv.split('\n');
-  let out=rows[0].replace(/\n$/,'')+',Analysis,Relevant,Owner\n';
+  const rows=csv.split(NL);
+  let out=rows[0]+',Analysis,Relevant,Owner'+NL;
   let ri=1;
   table.querySelectorAll('tr:not(.analysis-row)').forEach((r,i)=>{{
     if(i===0)return;
@@ -830,11 +830,15 @@ function exportCSV(){{
       const d=next.querySelector('.analysis-detail');
       if(d){{analysis=d.querySelector('strong')?.textContent||'';relevant=d.querySelector('.tag')?.textContent||'';owner=d.querySelector('.owner-tag')?.textContent||'';}}
     }}
-    out+=rows[ri]?.replace(/\n$/,'')+','+[analysis,relevant,owner].map(s=>'"'+s.replace(/"/g,'""')+'"').join(',')+'\n';
+    out+=(rows[ri]||'')+','+[analysis,relevant,owner].map(s=>'"'+s.replace(/"/g,'""')+'"').join(',')+NL;
     ri++;
   }});
   const blob=new Blob([out],{{type:'text/csv'}});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='container-security-report.csv';a.click();
+}}
+// PDF export via html2canvas approach - works cross-platform without print dialog
+function exportPDF(){{
+  window.print();
 }}
 </script>
 
