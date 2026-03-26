@@ -1113,7 +1113,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
 <p><strong>Total:</strong> {total} | <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
-<p><em>Each CVE has an analysis row below it explaining relevance to your <strong>{env_label}</strong> environment.</em></p>
+<p><em>Each CVE has an analysis row below it explaining relevance to your environment.</em></p>
 <table>
   <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th><th style="text-align:center"><a href="https://portal.xdr.trendmicro.com/index.html#/app/sase" target="_blank" style="text-decoration:none;color:#fff;background:#0066cc;padding:3px 10px;border-radius:4px;font-size:0.85em;font-weight:700;white-space:nowrap">Open in V1</a></th></tr>
 {rows_html}
