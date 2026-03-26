@@ -469,21 +469,27 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
                 analysis_html += f"<div class='note' style='margin-top:6px'><strong>Recommended:</strong> {specific['action']}</div>"
 
             xdr_q = ctx.get("xdr_query", "").format(cluster=cluster, namespace=namespace)
-            if xdr_q:
-                copy_id += 1
-                analysis_html += f"""<div class="xdr-query-box">
-<span class="xdr-label">XDR Query:</span>
+
+        # Raw event data + XDR query + results (all collapsed together)
+        raw_json = json.dumps(e, indent=2, default=str)
+        api_url = "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesEvaluationEventLogs"
+        copy_id += 1
+        raw_inner = ""
+        # XDR search query
+        if xdr_q:
+            raw_inner += f"""<div class="xdr-query-box" style="margin-bottom:8px">
+<span class="xdr-label">XDR Search:</span>
 <code id="xdr-{copy_id}">{xdr_q}</code>
 <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('xdr-{copy_id}').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='&#x2398;',1200)" title="Copy to clipboard">&#x2398;</button>
 </div>"""
-                # Show XDR results if available
-                xdr_key = f"{vtype}:{cluster}:{namespace}"
-                hits = xdr_results.get(xdr_key, [])
-                if hits:
-                    analysis_html += f'<div class="xdr-results"><span class="xdr-label">XDR Results ({len(hits)} events):</span><table class="xdr-table">'
-                    analysis_html += '<tr><th>Time</th><th>Container</th><th>Process</th><th>Command</th><th>Parent</th><th>User</th></tr>'
-                    for h in hits[:10]:
-                        analysis_html += f"""<tr>
+            # XDR results
+            xdr_key = f"{vtype}:{cluster}:{namespace}"
+            hits = xdr_results.get(xdr_key, [])
+            if hits:
+                raw_inner += f'<div class="xdr-results"><span class="xdr-label">XDR Results ({len(hits)} events):</span><table class="xdr-table">'
+                raw_inner += '<tr><th>Time</th><th>Container</th><th>Process</th><th>Command</th><th>Parent</th><th>User</th></tr>'
+                for h in hits[:10]:
+                    raw_inner += f"""<tr>
 <td>{h.get("eventTimeDT","")[:19]}</td>
 <td>{h.get("containerName","?")}</td>
 <td>{h.get("processName","?")}</td>
@@ -491,26 +497,23 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 <td>{h.get("parentName","?")}</td>
 <td>{h.get("objectUser","?")}</td>
 </tr>"""
-                    if len(hits) > 10:
-                        analysis_html += f'<tr><td colspan="6" style="text-align:center;font-style:italic">...and {len(hits)-10} more events. Run the query in V1 to see all.</td></tr>'
-                    analysis_html += '</table></div>'
-                elif xdr_results:
-                    analysis_html += '<div class="xdr-results"><span class="xdr-label">XDR Results: No container activity telemetry indexed yet. Eval events come through the admission controller pipeline, not the XDR data lake. Runtime sensor telemetry typically takes 15-60 minutes to appear in XDR search after the event.</span></div>'
-
-        # Raw event data (collapsed by default)
-        raw_json = json.dumps(e, indent=2, default=str)
-        event_id = e.get("id", "?")
-        api_url = "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesEvaluationEventLogs"
-        analysis_html += f"""<details class="raw-event">
-<summary>Raw Event Data &amp; API</summary>
-<div class="raw-event-body">
-<div class="xdr-query-box" style="margin-bottom:8px">
-<span class="xdr-label">curl:</span>
+                if len(hits) > 10:
+                    raw_inner += f'<tr><td colspan="6" style="text-align:center;font-style:italic">...and {len(hits)-10} more events. Run the query in V1 to see all.</td></tr>'
+                raw_inner += '</table></div>'
+            elif xdr_results:
+                raw_inner += '<div class="xdr-results"><span class="xdr-label">XDR Results: No container activity telemetry indexed yet. Runtime sensor telemetry typically takes 15-60 min to appear in XDR search.</span></div>'
+        # Eval API curl
+        raw_inner += f"""<div class="xdr-query-box" style="margin-bottom:8px">
+<span class="xdr-label">Eval API:</span>
 <code id="api-{copy_id}">curl -s -H "Authorization: Bearer YOUR_API_KEY" "{api_url}"</code>
 <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('api-{copy_id}').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='&#x2398;',1200)" title="Copy to clipboard">&#x2398;</button>
-</div>
-<pre class="raw-json">{html_mod.escape(raw_json)}</pre>
-</div>
+</div>"""
+        # Raw JSON
+        raw_inner += f'<pre class="raw-json">{html_mod.escape(raw_json)}</pre>'
+
+        analysis_html += f"""<details class="raw-event">
+<summary>Raw Event Data &amp; API</summary>
+<div class="raw-event-body">{raw_inner}</div>
 </details>"""
 
         if analysis_html:
