@@ -49,10 +49,21 @@ class V1:
         self.h = {"Authorization": f"Bearer {self.key}"}
 
     def _pages(self, path, params=None, max_pages=20):
+        import time
         items, url = [], f"{self.base}{path}"
         for _ in range(max_pages):
-            r = requests.get(url, headers=self.h, params=params, timeout=30)
-            r.raise_for_status()
+            for attempt in range(3):
+                try:
+                    r = requests.get(url, headers=self.h, params=params, timeout=30)
+                    r.raise_for_status()
+                    break
+                except requests.exceptions.HTTPError as e:
+                    if r.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                        wait = (attempt + 1) * 5
+                        print(f"  V1 API {r.status_code}, retrying in {wait}s...")
+                        time.sleep(wait)
+                    else:
+                        raise
             d = r.json()
             items.extend(d.get("items", []))
             nxt = d.get("nextLink")

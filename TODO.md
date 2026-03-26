@@ -12,51 +12,42 @@
 - [x] Cluster overview with protection modules, node topology, troubleshooting
 - [x] V1 API reference section with curl examples
 - [x] Secret scan CI workflow
+- [x] Multi-customer support (--customer flag, per-customer API keys + context)
+- [x] Auto-generate customer context from V1 API (platform detection, workloads)
+- [x] Amazon ECS support (clusters, image occurrences, sensor events)
+- [x] Dynamic relevance reasoning from customer context at report time
+- [x] Inline environment context editor with save-to-disk
+- [x] Sticky table headers below toolbar
+- [x] Critical findings section with clickable jump links
+- [x] Red border on critical items, neutral border on all items
+- [x] Copy CVE ID button per row
+- [x] Runtime events sorted by severity
+- [x] V1 API retry logic for transient errors (504, 500, 429)
+- [x] Fault-tolerant ECS API calls (V1 pagination bugs)
+
+## v1.1: Analysis Automation
+- [ ] Fix Anthropic API key (stored key has newline — re-store clean key)
+      OR document that analysis is done in-session by Claude and cached
+- [ ] Auto-run analysis for new CVEs not in analysis.json (currently manual)
+- [ ] Analysis cache per customer (currently shared analysis.json)
+- [ ] Diff analysis between runs (what changed since last report)
 
 ## v1.1: Lab Infrastructure
-- [ ] Spin up dedicated EC2 spot instance (Debian) with microk8s for persistent test lab
+- [x] Terminated orphaned v1-helper-lab EC2 instance (was costing money)
+- [ ] Spin up dedicated EC2 spot instance (Debian) with microk8s
 - [ ] Install V1 Container Security helm chart on new cluster
-- [ ] Register cluster in V1 console (connect to Trend first)
-- [ ] Re-spin PX_lab cluster (auto-shutdown after 4h, need Blueprint to recreate)
-- [ ] Add SSH security group rule for lab access
+- [ ] Register cluster in V1 console
 - [ ] Script to auto-provision lab: EC2 + microk8s + helm + V1 registration
-
-## v1.1: Test Event Generation
-- [ ] Continuous test event runner script (run in background on lab cluster)
-- [ ] Varied attack simulations for runtime telemetry:
-  - User creation / credential harvesting (useradd, /etc/shadow)
-  - Package manager in runtime (apt, pip install)
-  - Outbound C2 callbacks (curl to external domains)
-  - Reverse shell attempts (bash -i, nc listeners)
-  - Container escape attempts (mount /proc, access host PID)
-  - Cryptominer behavior (CPU-intensive process, mining pool connections)
-  - Supply chain: pull unscanned image, deploy pod with malicious entrypoint
-  - Lateral movement: curl to internal service IPs, K8s API discovery
-  - Secret extraction: env var dump, mounted secret volume reads
-  - AI-enabled attack vectors: LLM-generated payloads, prompt injection via env vars
-- [ ] Run events continuously so XDR data lake has telemetry to query
-- [ ] Cache raw V1 data after each run for historical comparison
-
-## v1.1: XDR Data Pipeline Integration
-- [ ] Understand two data paths: admission controller (eval logs) vs runtime telemetry (XDR search)
-- [ ] Wait for runtime sensor telemetry to index in XDR (15-60 min after events)
-- [ ] Add XDR container activity results to report (table under each event)
-- [ ] Claude analysis of XDR search results (not just eval events)
-- [ ] Include raw API queries with placeholder key for customer self-service
-- [ ] Historical data: save raw V1 data per run, compare across reports
+- [ ] Continuous test event runner (varied attack simulations for XDR telemetry)
 
 ## v1.2: Report Enhancements
-- [ ] Direct PDF export (without browser print dialog) — use jsPDF or html2pdf.js
-- [ ] Kubernetes labels in image grouping (need labels from V1 API or kubectl)
-- [ ] Claude analysis of XDR query results with insights/next steps
+- [ ] Direct PDF export without print dialog (jsPDF or html2pdf.js)
+- [ ] Kubernetes labels in image grouping
 - [ ] Historic trend analysis: compare current vs past reports
-- [ ] Auto-troubleshoot unexpected V1 values (UNKNOWN protection, missing data)
-- [ ] Debian base image support for lab (user preference)
+- [ ] Per-cluster sections in report (currently all clusters mixed together)
+- [ ] V1 console deep links per CVE (not just generic vuln management page)
 
 ## Future: Blueprint Browser Automation
-- [ ] Blueprint Extra MCP: browser_track_interactions (click/keypress recording)
-- [ ] Blueprint Extra MCP: browser_inject_overlay (persistent HTML in V1 DOM)
-- [ ] Blueprint Extra MCP: browser_click_sequence (multi-step V1 actions)
 - [ ] V1 overlay injection: analysis badges next to CVE rows in V1 console
-- [ ] V1 action automation: dismiss/accept/remediate via Blueprint click sequences
+- [ ] V1 action automation: dismiss/accept/remediate via Blueprint
 - [ ] V1 SPA navigation handling (re-inject on page change)
