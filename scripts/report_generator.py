@@ -524,6 +524,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 <td>{e.get("action","?")}</td>
 <td>{"; ".join(resources) or "-"}</td>
 <td>{e.get("policyName","?")}</td>
+<td></td>
 </tr>"""
 
         # Build analysis row with event-specific context and XDR query
@@ -823,6 +824,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <td><code>{f["resourceName"]}</code></td>
 <td>{f.get("containerName","-")}</td>
 <td>{f["repository"]}</td>
+<td></td>
 </tr>"""
 
         # Full-width analysis row under CVE
