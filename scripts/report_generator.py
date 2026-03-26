@@ -988,14 +988,15 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   /* Target highlight — flash row background yellow then revert */
   @keyframes target-flash {{ 0%,20% {{ background: rgba(240,192,64,0.25); }} 100% {{ background: inherit; }} }}
   tr.flash-target td, tr.flash-target + tr.analysis-row td {{ animation: target-flash 2s ease; }}
-  /* Row pair borders — neutral outline, crit overrides with red */
-  tr[id^="cve-"] td, tr[id^="evt-"] td {{ box-shadow: inset 0 -1px 0 var(--border), inset 0 1px 0 var(--border); }}
-  tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ box-shadow: inset 0 -1px 0 var(--border), inset 0 1px 0 var(--border), inset 1px 0 0 var(--border); }}
-  tr[id^="cve-"] td:last-child, tr[id^="evt-"] td:last-child {{ box-shadow: inset 0 -1px 0 var(--border), inset 0 1px 0 var(--border), inset -1px 0 0 var(--border); }}
+  /* Row pair borders — data row: top+sides, analysis row: bottom+sides */
+  tr[id^="cve-"] td, tr[id^="evt-"] td {{ box-shadow: inset 0 1px 0 var(--border); }}
+  tr[id^="cve-"] td:first-child, tr[id^="evt-"] td:first-child {{ box-shadow: inset 0 1px 0 var(--border), inset 1px 0 0 var(--border); }}
+  tr[id^="cve-"] td:last-child, tr[id^="evt-"] td:last-child {{ box-shadow: inset 0 1px 0 var(--border), inset -1px 0 0 var(--border); }}
   tr[id] + tr.analysis-row td {{ box-shadow: inset 0 -1px 0 var(--border), inset 1px 0 0 var(--border), inset -1px 0 0 var(--border); }}
-  tr.crit-row td {{ box-shadow: inset 0 -2px 0 #e94560, inset 0 2px 0 #e94560; }}
-  tr.crit-row td:first-child {{ box-shadow: inset 0 -2px 0 #e94560, inset 0 2px 0 #e94560, inset 2px 0 0 #e94560; }}
-  tr.crit-row td:last-child {{ box-shadow: inset 0 -2px 0 #e94560, inset 0 2px 0 #e94560, inset -2px 0 0 #e94560; }}
+  /* Red override for critical — same structure, thicker */
+  tr.crit-row td {{ box-shadow: inset 0 2px 0 #e94560; }}
+  tr.crit-row td:first-child {{ box-shadow: inset 0 2px 0 #e94560, inset 2px 0 0 #e94560; }}
+  tr.crit-row td:last-child {{ box-shadow: inset 0 2px 0 #e94560, inset -2px 0 0 #e94560; }}
   tr.crit-row + tr.analysis-row td {{ box-shadow: inset 0 -2px 0 #e94560, inset 2px 0 0 #e94560, inset -2px 0 0 #e94560; }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event {{ margin-top: 10px; }}
