@@ -382,7 +382,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 
     rows = ""
     copy_id = 0
-    for e in eval_events:
+    for e_idx, e in enumerate(eval_events):
         violations = [v.get("type","") for v in e.get("violationReasons",[])]
         resources = []
         for v in e.get("violationReasons",[]):
@@ -397,7 +397,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
         namespace = e.get("namespace", "?")
 
         decision_color = "#44ff44" if e.get("decision") == "allow" else "#ff4444"
-        rows += f"""<tr>
+        rows += f"""<tr id="evt-{e_idx}" style="scroll-margin-top:50px">
 <td>{e.get("createdDateTime","")[:19]}</td>
 <td>{cluster}</td>
 <td>{namespace}</td>
@@ -432,8 +432,8 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
             ev_rel = specific.get("relevant", "yes")
             sev_colors = {"critical": "#f8d7da", "high": "#f8d7da", "medium": "#fff3cd", "low": "#d4edda"}
             sev_text_c = {"critical": "#721c24", "high": "#721c24", "medium": "#856404", "low": "#155724"}
-            analysis_html += f'<span class="tag" style="background:{sev_colors.get(ev_sev,"#eee")};color:{sev_text_c.get(ev_sev,"#333")}">{ev_sev.upper()}</span> '
             analysis_html += f'<span class="tag" style="background:{sev_colors.get("critical" if ev_rel=="yes" else "low","#eee")};color:{sev_text_c.get("critical" if ev_rel=="yes" else "low","#333")}">Relevant: {ev_rel.upper()}</span> '
+            analysis_html += f'<span class="tag" style="background:{sev_colors.get(ev_sev,"#eee")};color:{sev_text_c.get(ev_sev,"#333")}">{ev_sev.upper()}</span> '
             analysis_html += f"<strong>{specific['title']}</strong>"
             analysis_html += f"<div class='reasoning'>{specific['analysis']}</div>"
             if specific.get("action"):
@@ -690,7 +690,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
         cve = f["cve"]
         analysis = analysis_map.get(cve, {})
 
-        rows_html += f"""<tr>
+        rows_html += f"""<tr id="cve-{cve}" style="scroll-margin-top:50px">
 <td><a href="{f['cveLink']}" target="_blank">{cve}</a></td>
 <td><span class="tag" style="background:{sc};color:{st}">{f["severity"].upper()}</span></td>
 <td>{f.get('score','')}</td>
@@ -750,26 +750,49 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
                     "title": ev["title"], "detail": ev["analysis"],
                 })
 
+    # Tag runtime event indices for anchor links
+    for e_idx, e in enumerate(eval_events or []):
+        cmds = [r.get("command","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("command")]
+        imgs = [r.get("image","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("image")]
+        objs = [r.get("object","") for v in e.get("violationReasons",[]) for r in v.get("resources",[]) if r.get("object")]
+        vtypes = [v.get("type","") for v in e.get("violationReasons",[])]
+        for vt in vtypes:
+            ev = _analyze_event(vt, cmds, imgs, objs, e.get("clusterName",""), e.get("namespace",""))
+            if ev.get("relevant") == "yes" and ev.get("severity") in ("critical", "high"):
+                for ci in critical_items:
+                    if ci["type"] == "Runtime" and ci["title"] == ev["title"] and "evt_idx" not in ci:
+                        ci["evt_idx"] = e_idx
+                        break
+
+    import re as _re
     if critical_items:
         crit_html = ""
         for ci in critical_items:
             sc = sev_colors.get(ci["severity"], "#eee")
             st = sev_text.get(ci["severity"], "#333")
-            crit_html += f"""<div class="status-box" style="border-left:4px solid {st}">
+            anchor = f"cve-{ci['id']}" if ci["type"] == "CVE" else f"evt-{ci.get('evt_idx', 0)}"
+            short = _re.sub(r'<[^>]+>', '', ci['title'])
+            if len(short) > 120:
+                short = short[:117] + "..."
+            crit_html += f"""<a class="crit-item" href="#{anchor}" title="Click to view details">
   <span class="tag" style="background:{sc};color:{st}">{ci['severity'].upper()}</span>
-  <span class="tag" style="background:#f8d7da;color:#721c24">{ci['type']}</span>
-  <strong>{ci['title']}</strong>
-  <div class="reasoning" style="margin-top:4px">{ci['detail']}</div>
+  <span class="tag" style="background:var(--code-bg);color:var(--fg)">{ci['type']}</span>
+  <span class="crit-pkg">{ci['package']}</span>
+  <span class="crit-title">{short}</span>
+</a>"""
+        critical_section = f"""<h2 style="color:#721c24;scroll-margin-top:50px">Critical Findings</h2>
+<div class="section" data-section="critical">
+  <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
+  <div class="section-body">
+<p>{len(critical_items)} high-relevance, high-severity findings. Click any to jump to details.</p>
+<div class="crit-list">{crit_html}</div>
+  </div>
 </div>"""
-        critical_section = f"""<h2 style="color:#721c24">Critical Findings</h2>
-<p>{len(critical_items)} high-relevance, high-severity findings require immediate attention:</p>
-{crit_html}"""
     else:
-        critical_section = """<h2 style="color:#155724">Critical Findings</h2>
+        critical_section = """<h2 style="color:#155724;scroll-margin-top:50px">Critical Findings</h2>
 <div class="status-box" style="border-left:4px solid #155724">
   <span class="tag healthy">ALL CLEAR</span>
   <strong>No high-relevance, high-severity alerts found. Nice!</strong>
-  <div class="reasoning">All detected vulnerabilities and runtime events are either low-relevance to your EKS/ECS environment or low severity. Continue monitoring.</div>
 </div>"""
 
     html = f"""<!DOCTYPE html>
@@ -830,6 +853,12 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .xdr-table {{ font-size: 0.82em; margin: 4px 0; }}
   .xdr-table th {{ background: var(--code-bg); color: var(--fg); font-size: 0.85em; padding: 4px 8px; }}
   .xdr-table td {{ padding: 3px 8px; font-size: 0.85em; }}
+  /* Critical findings list */
+  .crit-list {{ display: flex; flex-direction: column; gap: 2px; }}
+  .crit-item {{ display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; text-decoration: none; color: var(--fg); border: 2px solid transparent; transition: border-color 0.15s, background 0.15s; cursor: pointer; }}
+  .crit-item:hover {{ border-color: #f0c040; background: var(--bg2); }}
+  .crit-pkg {{ font-weight: 700; font-size: 0.85em; min-width: 70px; }}
+  .crit-title {{ font-size: 0.85em; color: var(--reasoning); }}
   .raw-event {{ margin-top: 10px; }}
   .raw-event summary {{ cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--meta); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 0; }}
   .raw-event summary:hover {{ color: var(--heading); }}
