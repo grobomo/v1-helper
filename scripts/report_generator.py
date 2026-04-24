@@ -1508,6 +1508,20 @@ def main():
         else:
             analyses = raw
             print(f"  {len(analyses)} analyses loaded")
+    # Detect unanalyzed CVEs
+    if analyses:
+        finding_cves = set(f["cve"] for f in findings)
+        analyzed_cves = set(analyses.keys())
+        new_cves = sorted(finding_cves - analyzed_cves)
+        if new_cves:
+            print(f"\n  {len(new_cves)} CVEs not in analysis.json (tagged UNANALYZED in report):")
+            for cve in new_cves[:20]:
+                sev = next((f.get("severity", "?") for f in findings if f["cve"] == cve), "?")
+                print(f"    {cve} ({sev})")
+            if len(new_cves) > 20:
+                print(f"    ... and {len(new_cves) - 20} more")
+            print("  To analyze: re-run without --skip-llm, or analyze in Claude Code session\n")
+
     elif not args.skip_llm:
         print("Running Claude analysis...")
         customer_ctx = load_customer_context(args.customer, clusters, vulns, occurrences)
