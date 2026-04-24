@@ -33,6 +33,8 @@
 - [x] Archived expired v1-lite/V1_API_KEY
 - [x] Added no-Playwright rule to CLAUDE.md
 - [x] DoD SIEM event verification for Panavision (TODO-dod-siem.md, scripts/verify_dod_events.py)
+- [ ] T006: Auto-detect new CVEs not in analysis.json and prompt for analysis
+- [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
 
 ### Working API keys
 - `v1-api/V1_API_KEY` — full permissions, Alerts+Clusters+OAT verified 200
