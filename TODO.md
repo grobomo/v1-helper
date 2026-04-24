@@ -27,18 +27,19 @@
 
 ## Current
 - [x] T002: V1 API key with full permissions stored (2026-04-24)
-- [x] T003: Generate OAT HTML report (2026-04-24, scripts/gen_oat_report.py)
-- [x] Archived expired v1-lite/V1_API_KEY, archived .playwright-mcp/ artifacts
+- [x] T003: OAT HTML report generator (scripts/gen_oat_report.py, 2026-04-24)
+- [x] T004: Fix v1-api executor.py credential path (delegated to v1-api skill TODO)
+- [x] T005: Fix Anthropic API key newline (key itself expired — analysis done in-session by Claude, cached to analysis.json)
+- [x] Archived expired v1-lite/V1_API_KEY
 - [x] Added no-Playwright rule to CLAUDE.md
-- [ ] T004: Fix v1-api executor.py credential path (stale: super-manager/credentials -> skills/credential-manager)
+- [x] DoD SIEM event verification for Panavision (TODO-dod-siem.md, scripts/verify_dod_events.py)
 
 ### Working API keys
 - `v1-api/V1_API_KEY` — full permissions, Alerts+Clusters+OAT verified 200
 - `v1-api/EP_API_KEY` — EP customer key, Alerts verified 200
 
 ## v1.1: Analysis Automation
-- [ ] Fix Anthropic API key (stored key has newline — re-store clean key)
-      OR document that analysis is done in-session by Claude and cached
+- [x] Anthropic API key: expired, not needed — analysis is done in-session by Claude and cached to analysis.json
 - [ ] Auto-run analysis for new CVEs not in analysis.json (currently manual)
 - [ ] Analysis cache per customer (currently shared analysis.json)
 - [ ] Diff analysis between runs (what changed since last report)

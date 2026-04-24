@@ -17,3 +17,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 __pycache__/
+
+# Session artifacts
+SESSION_STATE.md
+.workflow-state.json
+.mcp.json
