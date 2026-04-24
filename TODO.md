@@ -27,7 +27,7 @@
 
 ## Current
 - [x] T002: V1 API key with full permissions stored (2026-04-24)
-- [ ] T003: Generate OAT HTML report
+- [x] T003: Generate OAT HTML report (2026-04-24, scripts/gen_oat_report.py)
 - [x] Archived expired v1-lite/V1_API_KEY, archived .playwright-mcp/ artifacts
 - [x] Added no-Playwright rule to CLAUDE.md
 - [ ] T004: Fix v1-api executor.py credential path (stale: super-manager/credentials -> skills/credential-manager)
