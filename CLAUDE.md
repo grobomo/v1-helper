@@ -131,6 +131,11 @@ v1-helper/
 | Sensor Events | `/v3.0/containerSecurity/kubernetesSensorEventLogs` |
 | XDR Search | `/v3.0/search/containerActivities` (TMV1-Query header) |
 
+## Browser Automation
+
+- **NEVER use Playwright directly** (`mcp__playwright__*` tools). Always use Blueprint Extra MCP for browser automation.
+- Playwright artifacts archived to `archive/.playwright-mcp/`
+
 ## Git / GitHub
 
 - Account: grobomo (public, generic tool)
