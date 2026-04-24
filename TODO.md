@@ -25,6 +25,17 @@
 - [x] V1 API retry logic for transient errors (504, 500, 429)
 - [x] Fault-tolerant ECS API calls (V1 pagination bugs)
 
+## Current
+- [x] T002: V1 API key with full permissions stored (2026-04-24)
+- [ ] T003: Generate OAT HTML report
+- [x] Archived expired v1-lite/V1_API_KEY, archived .playwright-mcp/ artifacts
+- [x] Added no-Playwright rule to CLAUDE.md
+- [ ] T004: Fix v1-api executor.py credential path (stale: super-manager/credentials -> skills/credential-manager)
+
+### Working API keys
+- `v1-api/V1_API_KEY` — full permissions, Alerts+Clusters+OAT verified 200
+- `v1-api/EP_API_KEY` — EP customer key, Alerts verified 200
+
 ## v1.1: Analysis Automation
 - [ ] Fix Anthropic API key (stored key has newline — re-store clean key)
       OR document that analysis is done in-session by Claude and cached
