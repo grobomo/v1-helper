@@ -40,14 +40,16 @@ python scripts/executor.py automate read vuln_mgmt
 
 ```
 1. Load customer config        customers/<name>.json (API key name, region)
-2. Pull V1 data                Clusters, vulns, image occurrences, eval/sensor events
-3. Cache raw data              reports/<customer>-raw-data.json
-4. Enrich with K8s context     Map CVEs to namespaces, deployments, containers, labels
-5. Load/run CVE analysis       reports/analysis.json (cached) or Claude API (fresh)
-6. Generate relevance          Compare analysis against customers/<name>.md context
-7. Run XDR queries             Container activity search for runtime events
-8. Write HTML report           reports/<customer>_Container_Security_<date>.html
-9. Auto-open in browser
+2. Load previous raw data      For diff comparison (auto on fresh runs, --prev on cached)
+3. Pull V1 data                Clusters, vulns, image occurrences, eval/sensor events
+4. Cache raw data              reports/<customer>-raw-data.json
+5. Enrich with K8s context     Map CVEs to namespaces, deployments, containers, labels
+6. Compute diff                New/resolved/changed CVEs vs previous run
+7. Load/run CVE analysis       reports/<customer>-analysis.json (cached) or Claude API
+8. Generate relevance          Compare analysis against customers/<name>.md context
+9. Run XDR queries             Container activity search for runtime events
+10. Write HTML report          reports/<customer>_Container_Security_<date>.html
+11. Auto-open in browser
 ```
 
 ### Analysis Flow (two-pass)
