@@ -1307,7 +1307,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .font-btn:hover {{ background: var(--heading); color: var(--th-fg); }}
   .export-btn {{ padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg2); color: var(--fg); font-size: 0.72em; font-weight: 600; cursor: pointer; transition: background 0.15s; }}
   .export-btn:hover {{ background: var(--heading); color: var(--th-fg); }}
-  @media print {{ body {{ margin: 0; font-size: var(--base-font, 18px) !important; }} .no-print {{ display: none; }} .section-bar {{ display: none; }} .section-body {{ max-height: none !important; opacity: 1 !important; overflow: visible !important; }} .section {{ display: block; }} }}
+  @media print {{ body {{ margin: 0; font-size: var(--base-font, 18px) !important; }} .no-print {{ display: none; }} .section-bar {{ display: none; }} .section-body {{ max-height: none !important; opacity: 1 !important; overflow: visible !important; }} .section {{ display: block; }} h2,h3 {{ page-break-after: avoid; }} .image-group,.cluster-header {{ page-break-inside: avoid; }} tr {{ page-break-inside: avoid; }} }}
 </style>
 </head><body>
 
@@ -1319,7 +1319,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     <button class="font-btn" onclick="changeFontSize(2)" title="Increase font">+</button>
   </div>
   <button class="export-btn" onclick="exportCSV()" title="Export CVE table as CSV">CSV</button>
-  <button class="export-btn" onclick="window.print()" title="Print / Save as PDF">PDF</button>
+  <button class="export-btn" id="pdfBtn" onclick="exportPDF()" title="Export as PDF (direct download)">PDF</button>
   <div class="theme-toggle">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
     <label><input type="checkbox" id="themeSwitch"><span class="track"></span><span class="thumb"></span></label>
@@ -1521,9 +1521,46 @@ function exportCSV(){{
   const blob=new Blob([out],{{type:'text/csv'}});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='container-security-report.csv';a.click();
 }}
-// PDF export via html2canvas approach - works cross-platform without print dialog
+// PDF export — html2pdf.js loaded on-demand, falls back to print dialog if offline
 function exportPDF(){{
-  window.print();
+  const btn=document.getElementById('pdfBtn');
+  btn.textContent='Loading...';btn.disabled=true;
+  if(typeof html2pdf!=='undefined')return generatePDF(btn);
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';
+  s.onload=()=>generatePDF(btn);
+  s.onerror=()=>{{btn.textContent='PDF';btn.disabled=false;window.print();}};
+  document.head.appendChild(s);
+}}
+function generatePDF(btn){{
+  const collapsed=Array.from(document.querySelectorAll('.section.collapsed'));
+  collapsed.forEach(s=>s.classList.remove('collapsed'));
+  const wasDark=document.documentElement.classList.contains('dark');
+  if(wasDark)document.documentElement.classList.remove('dark');
+  const toolbar=document.querySelector('.toolbar');
+  if(toolbar)toolbar.style.display='none';
+  const title=document.title.replace(/[^a-zA-Z0-9_ -]/g,'').replace(/\\s+/g,'_')||'report';
+  btn.textContent='Generating...';
+  html2pdf().set({{
+    margin:[8,5,8,5],
+    filename:title+'.pdf',
+    image:{{type:'jpeg',quality:0.92}},
+    html2canvas:{{scale:1.5,useCORS:true,scrollY:0,windowWidth:1400}},
+    jsPDF:{{unit:'mm',format:'a3',orientation:'landscape'}},
+    pagebreak:{{mode:['css'],avoid:['.image-group','tr','.crit-item','.diff-item']}}
+  }}).from(document.body).save().then(()=>{{
+    collapsed.forEach(s=>s.classList.add('collapsed'));
+    if(wasDark)document.documentElement.classList.add('dark');
+    if(toolbar)toolbar.style.display='';
+    btn.textContent='PDF';btn.disabled=false;
+  }}).catch(e=>{{
+    console.error('PDF generation failed:',e);
+    collapsed.forEach(s=>s.classList.add('collapsed'));
+    if(wasDark)document.documentElement.classList.add('dark');
+    if(toolbar)toolbar.style.display='';
+    btn.textContent='PDF';btn.disabled=false;
+    window.print();
+  }});
 }}
 </script>
 

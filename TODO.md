@@ -1,9 +1,8 @@
 # v1-helper TODO
 
 ## Session Handoff
-Phase 1 complete. Extension stripped to pure CVE overlay tool — no MCP bridge, no Playwright.
-48-point validation tests passing. Lab EC2 terminated. PDF export WIP in worktree-pdf-export.
-Next: Phase 2 — verify extension on real V1 pages (needs V1 login password).
+Phase 1 complete. T035 (PDF export) done — html2pdf.js with CDN on-demand load, print fallback, 20-point test.
+Phase 2 blocked on V1 login password (T009). Working on T032 (cloud-init fix) next.
 
 ## Phase 1: Clean Architecture (DONE)
 - [x] T019: Remove MCP bridge code (1932-line background script -> 67 lines)
@@ -32,10 +31,10 @@ Next: Phase 2 — verify extension on real V1 pages (needs V1 login password).
 - [ ] T034: Deploy test workloads, generate CVEs and sensor events
 
 ## Phase 5: Reports Polish (lowest priority)
-- [ ] PDF export (WIP in worktree-pdf-export)
-- [ ] Executive summary
-- [ ] Historic trend analysis
-- [ ] K8s labels in image grouping (blocked by V1 API)
+- [x] T035: PDF export — html2pdf.js with CDN on-demand load, print fallback (20-point test)
+- [ ] T036: Executive summary
+- [ ] T037: Historic trend analysis
+- [ ] T038: K8s labels in image grouping (blocked by V1 API)
 
 ## Completed
 - [x] T013: MVP Chrome extension (ported from Blueprint Extra MCP)
