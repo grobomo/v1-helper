@@ -1,9 +1,9 @@
 # v1-helper TODO
 
 ## Session Handoff
-T015 + T016 done. Full settings page with V1 API key, region, test connection, customer context.
-53-point Playwright test suite passes. Also fixed popup race condition (service worker timing).
-Priority 1 extension tasks all complete. Next: Priority 2 reports or Priority 3 automation.
+T015, T016, T007, T010 done this session. Extension complete (53-point test suite).
+Report generator now groups findings by cluster in Section 2 — tested with EP customer data.
+Next: remaining Priority 2 report improvements or Priority 3 automation.
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
@@ -13,7 +13,7 @@ Priority 1 extension tasks all complete. Next: Priority 2 reports or Priority 3 
 - [x] T017: Extension verified — 53-point Playwright test (service worker, popup, V1 settings, content script, icons, overlay, CVE list)
 
 ## Priority 2: Reports
-- [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
+- [x] T007: Per-cluster report sections — images grouped under cluster headers with protection status, sorted by CVE count
 - [ ] Auto-run analysis for new CVEs not in analysis.json (currently manual)
 - [ ] Analysis cache per customer (currently shared analysis.json)
 - [ ] Diff analysis between runs (what changed since last report)
