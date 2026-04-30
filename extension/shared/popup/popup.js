@@ -33,6 +33,11 @@ let state = {
   debugMode: false,
   version: '0.1.0',
   projectName: null,
+  // V1 API settings
+  v1ApiKey: '',
+  v1Region: 'us-east-1',
+  v1CustomerContext: '',
+  v1TestResult: null, // null | 'testing' | 'ok' | 'error:message'
   // V1 analysis state
   analysisCount: 0,
   analysisRelevant: 0,
@@ -66,13 +71,17 @@ async function updateStatus() {
 
 async function loadState() {
   const storage = await browserAPI.storage.local.get([
-    'extensionEnabled', 'mcpPort', 'debugMode', 'v1h_overlay_enabled'
+    'extensionEnabled', 'mcpPort', 'debugMode', 'v1h_overlay_enabled',
+    'v1h_api_key', 'v1h_region', 'v1h_customer_context'
   ]);
 
   state.enabled = storage.extensionEnabled !== false;
   state.port = storage.mcpPort || '5555';
   state.debugMode = storage.debugMode || false;
   state.overlayEnabled = storage.v1h_overlay_enabled !== false;
+  state.v1ApiKey = storage.v1h_api_key || '';
+  state.v1Region = storage.v1h_region || 'us-east-1';
+  state.v1CustomerContext = storage.v1h_customer_context || '';
 
   const manifest = browserAPI.runtime.getManifest();
   state.version = manifest.version;
@@ -136,20 +145,67 @@ async function toggleEnabled() {
 // --- Settings ---
 
 async function saveSettings() {
+  const portChanged = state.port !== (await browserAPI.storage.local.get('mcpPort')).mcpPort;
   await browserAPI.storage.local.set({
     mcpPort: state.port,
     debugMode: state.debugMode,
+    v1h_api_key: state.v1ApiKey,
+    v1h_region: state.v1Region,
+    v1h_customer_context: state.v1CustomerContext,
   });
-  browserAPI.runtime.reload();
   state.showSettings = false;
+  state.v1TestResult = null;
+  if (portChanged) browserAPI.runtime.reload();
   render();
 }
 
 async function cancelSettings() {
-  const storage = await browserAPI.storage.local.get(['mcpPort', 'debugMode']);
+  const storage = await browserAPI.storage.local.get([
+    'mcpPort', 'debugMode', 'v1h_api_key', 'v1h_region', 'v1h_customer_context'
+  ]);
   state.port = storage.mcpPort || '5555';
   state.debugMode = storage.debugMode || false;
+  state.v1ApiKey = storage.v1h_api_key || '';
+  state.v1Region = storage.v1h_region || 'us-east-1';
+  state.v1CustomerContext = storage.v1h_customer_context || '';
   state.showSettings = false;
+  state.v1TestResult = null;
+  render();
+}
+
+const V1_REGIONS = {
+  'us-east-1': { label: 'US (Virginia)', base: 'https://api.xdr.trendmicro.com' },
+  'eu-central-1': { label: 'EU (Frankfurt)', base: 'https://api.eu.xdr.trendmicro.com' },
+  'ap-southeast-1': { label: 'Asia Pacific (Singapore)', base: 'https://api.sg.xdr.trendmicro.com' },
+  'ap-northeast-1': { label: 'Japan (Tokyo)', base: 'https://api.jp.xdr.trendmicro.com' },
+  'ap-southeast-2': { label: 'Australia (Sydney)', base: 'https://api.au.xdr.trendmicro.com' },
+};
+
+async function testV1Connection() {
+  if (!state.v1ApiKey) {
+    state.v1TestResult = 'error:No API key entered';
+    render();
+    return;
+  }
+  state.v1TestResult = 'testing';
+  render();
+  try {
+    const region = V1_REGIONS[state.v1Region] || V1_REGIONS['us-east-1'];
+    const resp = await fetch(`${region.base}/v3.0/containerSecurity/kubernetesClusters?top=1`, {
+      headers: { 'Authorization': `Bearer ${state.v1ApiKey}` }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const count = data.totalCount ?? data.items?.length ?? '?';
+      state.v1TestResult = `ok:${count} clusters`;
+    } else if (resp.status === 401 || resp.status === 403) {
+      state.v1TestResult = 'error:Invalid API key or insufficient permissions';
+    } else {
+      state.v1TestResult = `error:HTTP ${resp.status}`;
+    }
+  } catch (err) {
+    state.v1TestResult = `error:${err.message}`;
+  }
   render();
 }
 
@@ -169,31 +225,77 @@ function render() {
 }
 
 function renderSettings() {
+  const regionOptions = Object.entries(V1_REGIONS).map(([key, val]) =>
+    `<option value="${key}" ${state.v1Region === key ? 'selected' : ''}>${val.label}</option>`
+  ).join('');
+
+  const maskedKey = state.v1ApiKey
+    ? state.v1ApiKey.slice(0, 6) + '...' + state.v1ApiKey.slice(-4)
+    : '';
+
+  let testResultHtml = '';
+  if (state.v1TestResult === 'testing') {
+    testResultHtml = '<span class="settings-test testing">Testing...</span>';
+  } else if (state.v1TestResult?.startsWith('ok:')) {
+    testResultHtml = `<span class="settings-test ok">${escPopup(state.v1TestResult.slice(3))}</span>`;
+  } else if (state.v1TestResult?.startsWith('error:')) {
+    testResultHtml = `<span class="settings-test error">${escPopup(state.v1TestResult.slice(6))}</span>`;
+  }
+
   return `
     <div class="popup-container">
       <div class="popup-header">
         <img src="/icons/icon-32.png" alt="V1 Helper" class="header-icon" />
-        <h1>V1 Helper<span class="version-label">v${state.version}</span></h1>
+        <h1>Settings<span class="version-label">v${state.version}</span></h1>
       </div>
-      <div class="popup-content">
+      <div class="popup-content settings-scroll">
         <div class="settings-form">
+          <div class="settings-section-title">Vision One API</div>
           <label class="settings-label">
-            MCP Server Port:
+            API Key:
+            <div class="settings-key-row">
+              <input type="password" class="settings-input" id="v1ApiKeyInput"
+                value="${state.v1ApiKey}" placeholder="Paste V1 API key" autocomplete="off" />
+              <button class="settings-eye" id="toggleKeyVisibility" title="Show/hide key">
+                <span id="eyeIcon">&#128065;</span>
+              </button>
+            </div>
+          </label>
+          ${maskedKey ? `<p class="settings-help">Current: ${maskedKey}</p>` : ''}
+
+          <label class="settings-label">
+            Region:
+            <select class="settings-input" id="v1RegionSelect">${regionOptions}</select>
+          </label>
+
+          <div class="settings-test-row">
+            <button class="settings-button test" id="testConnectionBtn"
+              ${state.v1TestResult === 'testing' ? 'disabled' : ''}>Test Connection</button>
+            ${testResultHtml}
+          </div>
+
+          <div class="settings-divider"></div>
+          <div class="settings-section-title">Customer Context</div>
+          <label class="settings-label">
+            <textarea class="settings-textarea" id="customerContextInput"
+              placeholder="Describe the customer environment: managed K8s type, runtime packages, workload purposes..."
+              rows="4">${escPopup(state.v1CustomerContext)}</textarea>
+          </label>
+          <p class="settings-help">Used for CVE relevance reasoning. Markdown supported.</p>
+
+          <div class="settings-divider"></div>
+          <div class="settings-section-title">MCP Server</div>
+          <label class="settings-label">
+            Port:
             <input type="number" class="settings-input" id="portInput"
               value="${state.port}" min="1" max="65535" placeholder="5555" />
           </label>
-          <p class="settings-help">Default: 5555. Change if your MCP server runs on a different port.</p>
 
-          <div style="margin-top:16px;padding-top:12px;border-top:1px solid #e0e0e0">
-            <label class="settings-label" style="display:flex;align-items:center;cursor:pointer">
-              <input type="checkbox" id="debugModeCheckbox" ${state.debugMode ? 'checked' : ''}
-                style="width:18px;height:18px;margin-right:10px;cursor:pointer" />
-              <span>Debug Mode</span>
-            </label>
-            <p class="settings-help" style="margin-top:6px;margin-left:28px">
-              Enable detailed logging for troubleshooting
-            </p>
-          </div>
+          <label class="settings-label" style="display:flex;align-items:center;cursor:pointer;flex-direction:row;gap:10px">
+            <input type="checkbox" id="debugModeCheckbox" ${state.debugMode ? 'checked' : ''}
+              style="width:18px;height:18px;cursor:pointer;flex-shrink:0" />
+            <span>Debug Mode</span>
+          </label>
         </div>
         <div class="settings-actions">
           <button class="settings-button save" id="saveButton">Save</button>
@@ -385,10 +487,21 @@ function attachEventListeners() {
   if (state.showSettings) {
     document.getElementById('saveButton')?.addEventListener('click', saveSettings);
     document.getElementById('cancelButton')?.addEventListener('click', cancelSettings);
+    document.getElementById('testConnectionBtn')?.addEventListener('click', testV1Connection);
     const portInput = document.getElementById('portInput');
     if (portInput) portInput.addEventListener('input', (e) => { state.port = e.target.value; });
     const debugCb = document.getElementById('debugModeCheckbox');
     if (debugCb) debugCb.addEventListener('change', (e) => { state.debugMode = e.target.checked; });
+    const apiKeyInput = document.getElementById('v1ApiKeyInput');
+    if (apiKeyInput) apiKeyInput.addEventListener('input', (e) => { state.v1ApiKey = e.target.value; });
+    const regionSelect = document.getElementById('v1RegionSelect');
+    if (regionSelect) regionSelect.addEventListener('change', (e) => { state.v1Region = e.target.value; });
+    const contextInput = document.getElementById('customerContextInput');
+    if (contextInput) contextInput.addEventListener('input', (e) => { state.v1CustomerContext = e.target.value; });
+    document.getElementById('toggleKeyVisibility')?.addEventListener('click', () => {
+      const input = document.getElementById('v1ApiKeyInput');
+      if (input) input.type = input.type === 'password' ? 'text' : 'password';
+    });
   } else {
     document.getElementById('toggleButton')?.addEventListener('click', toggleEnabled);
     document.getElementById('settingsButton')?.addEventListener('click', () => {
