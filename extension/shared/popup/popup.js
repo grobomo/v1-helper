@@ -39,6 +39,10 @@ let state = {
   analysisLow: 0,
   analysisNo: 0,
   overlayEnabled: true,
+  // CVE list view
+  showCveList: false,
+  cveFilter: 'all',
+  cveEntries: [],
 };
 
 // --- Status ---
@@ -88,6 +92,7 @@ async function loadAnalysisStats() {
   state.analysisRelevant = 0;
   state.analysisLow = 0;
   state.analysisNo = 0;
+  state.cveEntries = entries;
 
   for (const e of entries) {
     const r = (e.relevant || '').toLowerCase();
@@ -153,7 +158,13 @@ async function cancelSettings() {
 function render() {
   const root = document.getElementById('root');
   if (!root) return;
-  root.innerHTML = state.showSettings ? renderSettings() : renderMain();
+  if (state.showCveList) {
+    root.innerHTML = renderCveList();
+  } else if (state.showSettings) {
+    root.innerHTML = renderSettings();
+  } else {
+    root.innerHTML = renderMain();
+  }
   attachEventListeners();
 }
 
@@ -187,6 +198,80 @@ function renderSettings() {
         <div class="settings-actions">
           <button class="settings-button save" id="saveButton">Save</button>
           <button class="settings-button cancel" id="cancelButton">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escPopup(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function getFilteredCves() {
+  if (state.cveFilter === 'all') return state.cveEntries;
+  return state.cveEntries.filter(e => (e.relevant || '').toLowerCase() === state.cveFilter);
+}
+
+function renderCveList() {
+  const filters = [
+    { key: 'all', label: 'All', count: state.analysisCount },
+    { key: 'yes', label: 'Relevant', count: state.analysisRelevant, color: '#dc2626' },
+    { key: 'low', label: 'Low', count: state.analysisLow, color: '#ca8a04' },
+    { key: 'no', label: 'None', count: state.analysisNo, color: '#16a34a' },
+  ];
+
+  const filtered = getFilteredCves();
+  const relevanceColors = {
+    yes: { bg: '#fef2f2', border: '#dc2626', text: '#991b1b', label: 'RELEVANT' },
+    low: { bg: '#fefce8', border: '#ca8a04', text: '#854d0e', label: 'LOW' },
+    no:  { bg: '#f0fdf4', border: '#16a34a', text: '#166534', label: 'NOT RELEVANT' },
+  };
+
+  const rows = filtered.map(e => {
+    const r = (e.relevant || '').toLowerCase();
+    const c = relevanceColors[r] || { bg: '#f3f4f6', border: '#9ca3af', text: '#4b5563', label: r || '?' };
+    const summary = e.summary || e.action || '';
+    const truncated = summary.length > 60 ? summary.slice(0, 57) + '...' : summary;
+    return `
+      <div class="cve-row">
+        <div class="cve-row-top">
+          <span class="cve-id">${escPopup(e.cve || '')}</span>
+          <span class="cve-badge" style="background:${c.bg};border-color:${c.border};color:${c.text}">
+            ${escPopup(c.label)}
+          </span>
+        </div>
+        ${truncated ? `<div class="cve-summary">${escPopup(truncated)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="popup-container">
+      <div class="popup-header">
+        <img src="/icons/icon-32.png" alt="V1 Helper" class="header-icon" />
+        <h1>CVE Analysis<span class="version-label">${filtered.length} of ${state.analysisCount}</span></h1>
+      </div>
+      <div class="popup-content">
+        <div class="cve-filters">
+          ${filters.map(f => `
+            <button class="cve-filter-btn ${state.cveFilter === f.key ? 'active' : ''}"
+              data-filter="${f.key}"
+              ${f.color && state.cveFilter === f.key ? `style="border-color:${f.color};color:${f.color}"` : ''}>
+              ${f.label} (${f.count})
+            </button>
+          `).join('')}
+        </div>
+        <div class="cve-list" id="cveListContainer">
+          ${filtered.length > 0 ? rows : '<div class="cve-empty">No CVEs match this filter.</div>'}
+        </div>
+        <div class="cve-actions">
+          <button class="cve-action-btn" id="copyCveIdsBtn" ${filtered.length === 0 ? 'disabled' : ''}>
+            Copy ${filtered.length} CVE ID${filtered.length !== 1 ? 's' : ''}
+          </button>
+          <button class="cve-action-btn secondary" id="cveBackBtn">Back</button>
         </div>
       </div>
     </div>
@@ -249,8 +334,9 @@ function renderMain() {
             <p style="font-size:12px;color:#666">No analysis loaded. Import analysis.json to see CVE overlays in V1 console.</p>
           `}
           <div style="display:flex;gap:8px;margin-top:8px;">
-            <button class="v1-import-btn" id="importAnalysisBtn" style="flex:1">Import analysis.json</button>
+            <button class="v1-import-btn" id="importAnalysisBtn" style="flex:1">Import</button>
             ${state.analysisCount > 0 ? `
+              <button class="v1-import-btn" id="viewCvesBtn" style="flex:1">View CVEs</button>
               <button class="v1-import-btn" id="injectOverlayBtn"
                 style="flex:1;background:${state.overlayEnabled ? '#16a34a' : '#9ca3af'}"
                 title="${state.overlayEnabled ? 'Overlays auto-inject on V1 pages' : 'Overlays disabled'}">
@@ -272,6 +358,30 @@ function renderMain() {
 // --- Event Listeners ---
 
 function attachEventListeners() {
+  if (state.showCveList) {
+    document.querySelectorAll('.cve-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.cveFilter = btn.dataset.filter;
+        render();
+      });
+    });
+    document.getElementById('copyCveIdsBtn')?.addEventListener('click', async () => {
+      const ids = getFilteredCves().map(e => e.cve).filter(Boolean).join('\n');
+      await navigator.clipboard.writeText(ids);
+      const btn = document.getElementById('copyCveIdsBtn');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+      }
+    });
+    document.getElementById('cveBackBtn')?.addEventListener('click', () => {
+      state.showCveList = false;
+      render();
+    });
+    return;
+  }
   if (state.showSettings) {
     document.getElementById('saveButton')?.addEventListener('click', saveSettings);
     document.getElementById('cancelButton')?.addEventListener('click', cancelSettings);
@@ -283,6 +393,11 @@ function attachEventListeners() {
     document.getElementById('toggleButton')?.addEventListener('click', toggleEnabled);
     document.getElementById('settingsButton')?.addEventListener('click', () => {
       state.showSettings = true;
+      render();
+    });
+    document.getElementById('viewCvesBtn')?.addEventListener('click', () => {
+      state.showCveList = true;
+      state.cveFilter = 'all';
       render();
     });
     document.getElementById('importAnalysisBtn')?.addEventListener('click', () => {
