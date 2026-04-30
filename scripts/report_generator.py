@@ -1516,7 +1516,22 @@ def main():
     print(f"  {len(findings)} findings enriched")
 
     analyses = None
-    analysis_file = args.analysis or str(REPORTS_DIR / "analysis.json")
+    # Per-customer analysis cache, with fallback to shared analysis.json
+    if args.analysis:
+        analysis_file = args.analysis
+    else:
+        per_customer = REPORTS_DIR / f"{args.customer}-analysis.json"
+        shared = REPORTS_DIR / "analysis.json"
+        if per_customer.exists():
+            analysis_file = str(per_customer)
+        elif shared.exists():
+            # Migrate: copy shared to per-customer on first use
+            print(f"  Migrating shared analysis.json to {per_customer.name}...")
+            import shutil
+            shutil.copy2(str(shared), str(per_customer))
+            analysis_file = str(per_customer)
+        else:
+            analysis_file = str(per_customer)
     if os.path.exists(analysis_file):
         print(f"Loading analysis from {analysis_file}...")
         raw = json.load(open(analysis_file))
