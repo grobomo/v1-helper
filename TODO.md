@@ -32,13 +32,13 @@
 - [x] T005: Fix Anthropic API key newline (key itself expired — analysis done in-session by Claude, cached to analysis.json)
 - [x] Archived expired v1-lite/V1_API_KEY
 - [x] Added no-Playwright rule to CLAUDE.md
-- [x] DoD SIEM event verification for Panavision (TODO-dod-siem.md, scripts/verify_dod_events.py)
+- [x] DoD SIEM event verification (scripts/verify_dod_events.py)
 - [x] T006: Auto-detect new CVEs not in analysis.json and prompt for analysis (2026-04-24)
 - [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
 
 ### Working API keys
 - `v1-api/V1_API_KEY` — full permissions, Alerts+Clusters+OAT verified 200
-- `v1-api/EP_API_KEY` — EP customer key, Alerts verified 200
+- `v1-api/EP_API_KEY` — customer key, Alerts verified 200
 
 ## v1.1: Analysis Automation
 - [x] Anthropic API key: expired, not needed — analysis is done in-session by Claude and cached to analysis.json
