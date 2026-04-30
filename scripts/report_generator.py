@@ -1531,19 +1531,30 @@ def main():
         else:
             analyses = raw
             print(f"  {len(analyses)} analyses loaded")
-    # Detect unanalyzed CVEs
+    # Detect and auto-analyze unanalyzed CVEs
     if analyses:
         finding_cves = set(f["cve"] for f in findings)
         analyzed_cves = set(analyses.keys())
         new_cves = sorted(finding_cves - analyzed_cves)
         if new_cves:
-            print(f"\n  {len(new_cves)} CVEs not in analysis.json (tagged UNANALYZED in report):")
+            print(f"\n  {len(new_cves)} new CVEs not in analysis.json:")
             for cve in new_cves[:20]:
                 sev = next((f.get("severity", "?") for f in findings if f["cve"] == cve), "?")
                 print(f"    {cve} ({sev})")
             if len(new_cves) > 20:
                 print(f"    ... and {len(new_cves) - 20} more")
-            print("  To analyze: re-run without --skip-llm, or analyze in Claude Code session\n")
+
+            if args.skip_llm:
+                print("  Skipping analysis (--skip-llm). These will show as UNANALYZED in the report.\n")
+            else:
+                print(f"  Auto-analyzing {len(new_cves)} new CVEs...")
+                new_findings = [f for f in findings if f["cve"] in set(new_cves)]
+                customer_ctx = load_customer_context(args.customer, clusters, vulns, occurrences)
+                new_analyses = run_analysis(new_findings, customer_ctx, args.batch_size)
+                if new_analyses:
+                    analyses.update(new_analyses)
+                    json.dump(analyses, open(analysis_file, "w"), indent=2)
+                    print(f"  Merged {len(new_analyses)} new analyses into {analysis_file} (total: {len(analyses)})")
 
     elif not args.skip_llm:
         print("Running Claude analysis...")
