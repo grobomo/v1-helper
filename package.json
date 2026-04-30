@@ -1,0 +1,11 @@
+{
+  "name": "v1-helper",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/extension-load.spec.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}

@@ -1,18 +1,16 @@
 # v1-helper TODO
 
 ## Session Handoff
-T017 static validation complete — all manifest refs, ES module imports, MV3 checks pass.
-Fixed: duplicate content-script listeners, renamed __blueprint* IPC globals to __v1h*.
-Scanner updated to exclude SESSION_STATE.md and .playwright-mcp.
-Next: manually load extension in Chrome (chrome://extensions → Developer Mode → Load Unpacked → extension/).
-Then T014 (CVE overlay injection into V1 console DOM).
+T013 + T017 done. Extension loads, popup renders, service worker runs, no errors.
+Playwright test at tests/extension-load.spec.js — run with `npm test`.
+Next: T014 (CVE overlay injection into V1 console DOM).
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
 - [ ] T014: V1 console overlay — inject CVE analysis badges into vulnerability page
 - [ ] T015: Popup with quick actions (dismiss non-relevant, accept low-risk, view analysis)
 - [ ] T016: Extension settings page (V1 API key, region, customer context)
-- [ ] T017: Package and load as unpacked extension for testing — static validation done, needs manual Chrome load test
+- [x] T017: Extension verified — Playwright test loads extension, checks service worker, popup, settings, content script, icons (20/20) — static validation done, needs manual Chrome load test
 
 ## Priority 2: Reports
 - [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
