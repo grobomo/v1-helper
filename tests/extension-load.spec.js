@@ -114,6 +114,52 @@ async function runTest() {
     const isChecked = await debugCheckbox.isChecked();
     assert('Debug mode off by default', !isChecked);
 
+    // V1 API settings
+    const apiKeyInput = await popup.$('#v1ApiKeyInput');
+    assert('V1 API key input exists', !!apiKeyInput);
+    const apiKeyType = await apiKeyInput.getAttribute('type');
+    assert('API key input is password type', apiKeyType === 'password');
+
+    const regionSelect = await popup.$('#v1RegionSelect');
+    assert('V1 region select exists', !!regionSelect);
+    const regionValue = await popup.$eval('#v1RegionSelect', el => el.value);
+    assert('Default region is us-east-1', regionValue === 'us-east-1');
+    const regionOptions = await popup.$$eval('#v1RegionSelect option', opts => opts.length);
+    assert('5 region options available', regionOptions === 5);
+
+    const testBtn = await popup.$('#testConnectionBtn');
+    assert('Test Connection button exists', !!testBtn);
+
+    const contextArea = await popup.$('#customerContextInput');
+    assert('Customer context textarea exists', !!contextArea);
+
+    // Toggle key visibility
+    const eyeBtn = await popup.$('#toggleKeyVisibility');
+    assert('Show/hide key button exists', !!eyeBtn);
+    await eyeBtn.click();
+    const visibleType = await popup.$eval('#v1ApiKeyInput', el => el.type);
+    assert('API key visible after toggle', visibleType === 'text');
+    await eyeBtn.click();
+    const hiddenType = await popup.$eval('#v1ApiKeyInput', el => el.type);
+    assert('API key hidden after second toggle', hiddenType === 'password');
+
+    // Fill in V1 settings and save
+    await apiKeyInput.fill('test-api-key-12345');
+    await popup.selectOption('#v1RegionSelect', 'eu-central-1');
+    await popup.fill('#customerContextInput', 'EKS cluster running nginx');
+    await popup.click('#saveButton');
+    await popup.waitForSelector('#toggleButton', { timeout: 3000 });
+
+    // Verify settings persisted — reopen settings
+    await popup.click('#settingsButton');
+    await popup.waitForSelector('#v1ApiKeyInput', { timeout: 3000 });
+    const savedRegion = await popup.$eval('#v1RegionSelect', el => el.value);
+    assert('Region persisted after save', savedRegion === 'eu-central-1');
+    const savedContext = await popup.$eval('#customerContextInput', el => el.value);
+    assert('Customer context persisted after save', savedContext === 'EKS cluster running nginx');
+    const savedKeyLen = await popup.$eval('#v1ApiKeyInput', el => el.value.length);
+    assert('API key persisted after save', savedKeyLen === 18);
+
     // Cancel back to main
     await popup.click('#cancelButton');
     await popup.waitForSelector('#toggleButton', { timeout: 3000 });
