@@ -894,45 +894,65 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   {node_rows}
 </table>"""
 
-    # Build image group sections
-    groups_html = ""
+    # Build image group sections — grouped by cluster
+    cluster_map_info = {c.get("name", "?"): c for c in clusters}
+    cluster_groups = defaultdict(list)
     for (cluster_name, repo, ns, res_name, labels), group_findings in groups.items():
-        sev_counts = defaultdict(int)
-        for f in group_findings:
-            sev_counts[f["severity"]] += 1
-        sev_summary = ", ".join(f"{v} {k}" for k, v in sorted(sev_counts.items(), key=lambda x: ["critical","high","medium","low"].index(x[0]) if x[0] in ["critical","high","medium","low"] else 9))
+        cluster_groups[cluster_name].append((repo, ns, res_name, labels, group_findings))
 
-        # K8s location info from first finding in group
-        f0 = group_findings[0]
-        res_type = f0.get("resourceType", "-")
-        container = f0.get("containerName", "-")
-        lbl = f0.get("labels", "")
+    # Sort clusters: most CVEs first
+    sorted_clusters = sorted(cluster_groups.items(), key=lambda x: sum(len(gf) for _, _, _, _, gf in x[1]), reverse=True)
+
+    groups_html = ""
+    for cluster_name, image_groups in sorted_clusters:
+        total_cves = sum(len(gf) for _, _, _, _, gf in image_groups)
+        ci = cluster_map_info.get(cluster_name, {})
+        orch = ci.get("orchestrator", "?")
+        protection = ci.get("protectionStatus", "?")
+        prot_class = "healthy" if protection == "HEALTHY" else "medium"
 
         groups_html += f"""
-<div class="status-box">
-  <h3><span class="tag medium">{len(group_findings)} CVEs</span> {repo} <span style="font-size:0.75em;color:var(--meta);font-weight:400">on {cluster_name}</span></h3>
-  <div class="grid">
-    <div>
-      <p class="kv"><strong>Registry:</strong> <code>{f0.get('registry','')}</code></p>
-      <p class="kv"><strong>Repository:</strong> <code>{repo}</code></p>
-      <p class="kv"><strong>Digest:</strong> <code>{f0.get('imageDigest','')}</code></p>
-      <p class="kv"><strong>CVEs:</strong> {sev_summary}</p>
-    </div>
-    <div>
-      <p class="kv"><strong>Namespace:</strong> <code>{ns}</code></p>
-      <p class="kv"><strong>{res_type}:</strong> <code>{res_name}</code></p>
-      <p class="kv"><strong>Container:</strong> <code>{container}</code></p>"""
-        if lbl:
+<div class="cluster-section">
+  <h3 class="cluster-header"><span class="tag {prot_class}">{protection}</span> {html_mod.escape(cluster_name)} <span style="font-size:0.75em;color:var(--meta);font-weight:400">({orch}) &mdash; {total_cves} CVEs across {len(image_groups)} image{'s' if len(image_groups) != 1 else ''}</span></h3>"""
+
+        for repo, ns, res_name, labels, group_findings in image_groups:
+            sev_counts = defaultdict(int)
+            for f in group_findings:
+                sev_counts[f["severity"]] += 1
+            sev_summary = ", ".join(f"{v} {k}" for k, v in sorted(sev_counts.items(), key=lambda x: ["critical","high","medium","low"].index(x[0]) if x[0] in ["critical","high","medium","low"] else 9))
+
+            f0 = group_findings[0]
+            res_type = f0.get("resourceType", "-")
+            container = f0.get("containerName", "-")
+            lbl = f0.get("labels", "")
+
             groups_html += f"""
-      <p class="kv"><strong>Labels:</strong> <code>{lbl}</code></p>"""
-        groups_html += f"""
+  <div class="status-box">
+    <h4><span class="tag medium">{len(group_findings)} CVEs</span> {repo}</h4>
+    <div class="grid">
+      <div>
+        <p class="kv"><strong>Registry:</strong> <code>{f0.get('registry','')}</code></p>
+        <p class="kv"><strong>Repository:</strong> <code>{repo}</code></p>
+        <p class="kv"><strong>Digest:</strong> <code>{f0.get('imageDigest','')}</code></p>
+        <p class="kv"><strong>CVEs:</strong> {sev_summary}</p>
+      </div>
+      <div>
+        <p class="kv"><strong>Namespace:</strong> <code>{ns}</code></p>
+        <p class="kv"><strong>{res_type}:</strong> <code>{res_name}</code></p>
+        <p class="kv"><strong>Container:</strong> <code>{container}</code></p>"""
+            if lbl:
+                groups_html += f"""
+        <p class="kv"><strong>Labels:</strong> <code>{lbl}</code></p>"""
+            groups_html += f"""
+      </div>
     </div>
-  </div>
-  <div class="note">
-    <strong>SRE Fix:</strong> Update image in {res_type.lower()} <code>{res_name}</code> (namespace: <code>{ns}</code>):<br>
-    <code>kubectl set image {res_type.lower()}/{res_name} {container}={repo}:&lt;patched-tag&gt; -n {ns}</code>
-  </div>
-</div>"""
+    <div class="note">
+      <strong>SRE Fix:</strong> Update image in {res_type.lower()} <code>{res_name}</code> (namespace: <code>{ns}</code>):<br>
+      <code>kubectl set image {res_type.lower()}/{res_name} {container}={repo}:&lt;patched-tag&gt; -n {ns}</code>
+    </div>
+  </div>"""
+
+        groups_html += "\n</div>"
 
     # Build CVE detail table with full-width analysis rows
     total = len(findings)
@@ -1119,6 +1139,9 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .tag.healthy {{ background: #d4edda; color: #155724; }}
   .tag.medium {{ background: #fff3cd; color: #856404; }}
   .status-box {{ background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 12px 0; box-shadow: 0 1px 3px var(--shadow); }}
+  .cluster-section {{ margin: 20px 0; padding: 16px 0; border-top: 2px solid var(--border); }}
+  .cluster-section:first-child {{ border-top: none; padding-top: 0; }}
+  .cluster-header {{ margin-bottom: 8px; }}
   .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
   .kv {{ margin: 4px 0; }}
   .kv strong {{ color: var(--heading); }}
@@ -1268,7 +1291,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <div class="section" data-section="images">
   <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
   <div class="section-body">
-<p>Maps each vulnerable container image to its exact K8s location so SRE knows where to patch.</p>
+<p>Vulnerable images grouped by cluster, then by K8s location. {len(sorted_clusters)} cluster{'s' if len(sorted_clusters) != 1 else ''}, {len(groups)} image group{'s' if len(groups) != 1 else ''}.</p>
 {groups_html}
   </div>
 </div>

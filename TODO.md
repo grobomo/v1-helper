@@ -24,7 +24,7 @@ Priority 1 extension tasks all complete. Next: Priority 2 reports or Priority 3 
 
 ## Priority 3: Automation Tooling
 - [ ] T009: Live test automation against V1 console — BLOCKED: need V1 login password stored in credential-manager
-- [ ] T010: V1 SPA navigation handling (re-inject overlays on page change)
+- [x] T010: V1 SPA navigation handling — implemented in T014 content script (MutationObserver URL watcher)
 - [ ] T011: Bulk CVE triage workflow (auto-dismiss non-relevant, accept low-risk, flag critical)
 - [ ] T012: V1 page data scraper — extract data not available via API (policy details, etc)
 
