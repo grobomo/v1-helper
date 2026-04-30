@@ -183,6 +183,81 @@ def plan_from_report(action="dismiss"):
         return build_plan([], {"error": f"Unknown action: {action}"})
 
 
+def plan_triage(customer=None, dry_run=False):
+    """Full bulk triage: dismiss non-relevant, accept low-risk, flag critical.
+
+    Returns dict with:
+      - summary: counts per category
+      - plans: list of action plans to execute (dismiss + accept)
+      - critical: CVEs flagged for manual review
+      - dry_run: if True, plans are preview-only
+    """
+    # Find analysis file — per-customer first, then shared
+    if customer:
+        analysis_path = PROJECT_ROOT / "reports" / f"{customer}-analysis.json"
+    else:
+        analysis_path = PROJECT_ROOT / "reports" / "analysis.json"
+
+    if not analysis_path.exists():
+        analysis_path = PROJECT_ROOT / "reports" / "analysis.json"
+
+    if not analysis_path.exists():
+        return {"error": "No analysis file found. Run report first.", "plans": [], "critical": []}
+
+    analyses = json.loads(analysis_path.read_text())
+    if isinstance(analyses, list):
+        analyses = {a["cve"]: a for a in analyses if "cve" in a}
+
+    # Categorize
+    dismiss = []  # relevant == "no"
+    accept = []   # relevant == "low"
+    critical = [] # severity critical/high AND relevant == "yes"
+    review = []   # relevant == "yes" but not critical severity
+
+    for cve, a in analyses.items():
+        rel = a.get("relevant", "").lower()
+        action_text = a.get("action", a.get("what", ""))
+        owner = a.get("owner", "")
+
+        if rel == "no":
+            dismiss.append(cve)
+        elif rel == "low":
+            accept.append(cve)
+        elif rel == "yes":
+            item = {"cve": cve, "owner": owner, "action": action_text}
+            if owner.lower() in ("sre", "dev", "security"):
+                critical.append(item)
+            else:
+                review.append(item)
+
+    summary = {
+        "total": len(analyses),
+        "dismiss": len(dismiss),
+        "accept": len(accept),
+        "critical": len(critical),
+        "review": len(review),
+        "unanalyzed": len(analyses) - len(dismiss) - len(accept) - len(critical) - len(review),
+    }
+
+    plans = []
+    if not dry_run:
+        if dismiss:
+            plans.append(plan_dismiss_cves(dismiss, "Bulk triage: not relevant per analysis"))
+        if accept:
+            plans.append(plan_change_cve_status(accept, "accepted"))
+
+    return {
+        "summary": summary,
+        "plans": plans,
+        "critical": critical,
+        "review": review,
+        "dismiss_cves": dismiss,
+        "accept_cves": accept,
+        "analysis_file": str(analysis_path),
+        "dry_run": dry_run,
+    }
+
+
 # ============================================================
 # CLI
 # ============================================================
