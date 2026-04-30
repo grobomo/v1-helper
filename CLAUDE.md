@@ -1,8 +1,9 @@
 # v1-helper
 
-Vision One container security toolkit. Two sub-modules:
+Vision One Container Security toolkit. Three surfaces:
+- **Chrome Extension** — CVE analysis overlays on V1 console pages. Standalone — no MCP, no Playwright.
 - **Reports** — Pull V1 API data, analyze CVEs with Claude, generate interactive HTML reports
-- **Automate** — V1 console automation via Blueprint MCP action plans (dismiss CVEs, inject overlays, scrape pages)
+- **Automate** — V1 console automation via Blueprint MCP action plans (dismiss CVEs, scrape pages)
 
 ## Quick Start
 
@@ -21,9 +22,8 @@ python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.js
 python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.json --prev reports/ep-prev-data.json --skip-llm
 
 # --- Chrome Extension ---
-# Launch Chromium with V1 Helper extension (bypasses enterprise Chrome policies)
-node scripts/launch-extension.js
-node scripts/launch-extension.js --url https://portal.trendmicro.com
+# Load in Chrome: chrome://extensions > Developer Mode > Load Unpacked > select extension/
+# Import analysis.json via popup, then browse V1 Container Security to see overlays
 
 # --- Automation ---
 # Bulk triage: preview what would be dismissed/accepted/flagged
@@ -142,9 +142,9 @@ v1-helper/
 │   ├── v1_api.py                 # V1 REST API wrapper
 │   ├── v1_reader.py              # V1 DOM reader via Blueprint
 │   ├── v1_overlay.py             # V1 DOM overlay injection
-│   ├── v1_actions.py             # (deprecated, redirects to automate/)
 │   ├── verify_dod_events.py      # DoD SIEM event verification
-│   ├── launch-extension.js       # Launch Chromium with V1 Helper extension
+│   ├── aws/                     # AWS lab infrastructure scripts
+│   ├── lab/                     # Lab cluster setup scripts
 │   └── automate/                 # V1 console automation sub-module
 │       ├── __init__.py           # Package exports
 │       ├── actions.py            # Action plan builders (dismiss, accept, overlay, triage)
@@ -174,8 +174,10 @@ v1-helper/
 
 ## Browser Automation
 
-- **NEVER use Playwright directly** (`mcp__playwright__*` tools). Always use Blueprint Extra MCP for browser automation.
-- Playwright artifacts archived to `archive/.playwright-mcp/`
+- Use **Blueprint Extra MCP** for V1 console automation (navigate, click, evaluate JS).
+- The Chrome extension is **NOT** a browser automation tool — it only provides CVE overlays.
+- **No Playwright dependency.** Extension loads in Chrome via developer mode.
+- MCP bridge code archived in `archive/extension-mcp-bridge/`
 
 ## V1 Console Automation (scripts/automate/)
 
