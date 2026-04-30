@@ -1,27 +1,18 @@
 {
   "manifest_version": 3,
   "name": "V1 Helper for Chrome",
-  "version": "0.1.0",
-  "description": "Vision One console helper — browser automation via MCP, CVE analysis overlays, quick triage.",
+  "version": "0.2.0",
+  "description": "Vision One Container Security helper — CVE analysis overlays, relevance badges, quick triage.",
   "permissions": [
-    "alarms",
-    "debugger",
     "activeTab",
     "tabs",
-    "storage",
-    "management",
-    "webRequest",
-    "webNavigation",
-    "scripting",
-    "offscreen",
-    "notifications"
+    "storage"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "*://*.trendmicro.com/*"
   ],
   "background": {
-    "service_worker": "chrome/src/background-module.js",
-    "type": "module"
+    "service_worker": "chrome/src/background-module.js"
   },
   "action": {
     "default_title": "V1 Helper for Chrome",
@@ -41,9 +32,9 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["*://*.trendmicro.com/*"],
       "js": ["chrome/src/content-script.js"],
-      "run_at": "document_start",
+      "run_at": "document_idle",
       "all_frames": false
     }
   ]
