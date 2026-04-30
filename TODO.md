@@ -1,7 +1,7 @@
 # v1-helper TODO
 
 ## Session Handoff
-Diff analysis done — --prev flag compares findings, auto-loads previous cache on fresh runs.
+This session: V1 deep links (region-aware portal URLs, per-CVE buttons, fixed wrong links) + diff analysis (--prev flag, auto-compare on fresh runs, new/resolved/changed section in report). CLAUDE.md updated.
 Next: Kubernetes labels in grouping, PDF export, or historic trend analysis.
 
 ## Priority 1: Chrome Extension
