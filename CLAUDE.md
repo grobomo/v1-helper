@@ -1,10 +1,13 @@
 # v1-helper
 
-Container security report generator for Trend Vision One. Pulls V1 API data, analyzes CVEs and runtime events with Claude, generates self-contained HTML reports with interactive features.
+Vision One container security toolkit. Two sub-modules:
+- **Reports** — Pull V1 API data, analyze CVEs with Claude, generate interactive HTML reports
+- **Automate** — V1 console automation via Blueprint MCP action plans (dismiss CVEs, inject overlays, scrape pages)
 
 ## Quick Start
 
 ```bash
+# --- Reports ---
 # Run report for a customer (first run auto-creates config + context)
 python scripts/report_generator.py --customer ep
 
@@ -13,6 +16,19 @@ python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.js
 
 # Skip Claude LLM analysis (use existing analysis.json)
 python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.json --skip-llm
+
+# --- Automation ---
+# Generate a plan to dismiss specific CVEs in V1 console
+python scripts/executor.py automate dismiss CVE-2024-1234 CVE-2024-5678
+
+# Auto-dismiss all non-relevant CVEs from analysis
+python scripts/executor.py automate auto-dismiss
+
+# Inject analysis overlays into V1 vulnerability page
+python scripts/executor.py automate overlay
+
+# Scrape V1 page data
+python scripts/executor.py automate read vuln_mgmt
 ```
 
 ## How It Works
@@ -102,12 +118,18 @@ v1-helper/
 │   └── workflows/
 │       └── secret-scan.yml       # CI secret scanning
 ├── scripts/
-│   ├── report_generator.py       # Main report generator
-│   ├── executor.py               # V1 page orchestrator (Blueprint MCP)
+│   ├── report_generator.py       # Container security HTML report generator
+│   ├── gen_oat_report.py         # OAT detection HTML report generator
+│   ├── executor.py               # Unified CLI (report + automate sub-commands)
 │   ├── v1_api.py                 # V1 REST API wrapper
 │   ├── v1_reader.py              # V1 DOM reader via Blueprint
 │   ├── v1_overlay.py             # V1 DOM overlay injection
-│   └── v1_actions.py             # V1 action automation
+│   ├── v1_actions.py             # (deprecated, redirects to automate/)
+│   ├── verify_dod_events.py      # DoD SIEM event verification
+│   └── automate/                 # V1 console automation sub-module
+│       ├── __init__.py           # Package exports
+│       ├── actions.py            # Action plan builders (dismiss, accept, overlay)
+│       └── js.py                 # JavaScript payloads for V1 DOM interaction
 ├── customers/                    # Per-customer config + context (gitignored)
 │   ├── demo.json                 # API key name + region
 │   ├── demo.md                   # Environment context
@@ -135,6 +157,45 @@ v1-helper/
 
 - **NEVER use Playwright directly** (`mcp__playwright__*` tools). Always use Blueprint Extra MCP for browser automation.
 - Playwright artifacts archived to `archive/.playwright-mcp/`
+
+## V1 Console Automation (scripts/automate/)
+
+Action plans are structured JSON sequences. Python generates the plan, Claude Code executes it step-by-step via Blueprint MCP.
+
+### Architecture
+
+```
+Python (automate/actions.py)  -->  generates plan JSON (steps + JS payloads)
+Claude Code                   -->  reads plan, calls Blueprint MCP per step
+Blueprint MCP                 -->  controls browser (evaluate JS, click, snapshot)
+```
+
+### Plan step types
+
+| Step | Blueprint MCP tool | Description |
+|------|--------------------|-------------|
+| `navigate` | `browser_navigate` | Go to a V1 SPA route |
+| `evaluate` | `browser_evaluate` | Run JS in page, check result |
+| `snapshot` | `browser_snapshot` | Verify page state visually |
+| `wait` | (pause between calls) | Let V1 SPA update |
+
+### How Claude Code executes a plan
+
+1. `python scripts/executor.py automate auto-dismiss` generates plan JSON
+2. Claude reads the plan steps
+3. For each step, Claude calls the corresponding Blueprint MCP tool
+4. If a step has `expect`, Claude checks the result and stops on failure
+5. Final snapshot confirms the outcome
+
+### Available automations
+
+| Command | What it does |
+|---------|-------------|
+| `automate dismiss CVE-...` | Select CVEs, change status to dismissed |
+| `automate accept CVE-...` | Select CVEs, change status to accepted |
+| `automate auto-dismiss` | Dismiss all non-relevant CVEs from analysis.json |
+| `automate overlay` | Inject analysis badges into V1 vulnerability page |
+| `automate read [page]` | Navigate to V1 page and scrape data |
 
 ## Git / GitHub
 

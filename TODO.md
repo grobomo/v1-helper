@@ -61,7 +61,12 @@
 - [ ] Per-cluster sections in report (currently all clusters mixed together)
 - [ ] V1 console deep links per CVE (not just generic vuln management page)
 
-## Future: Blueprint Browser Automation
-- [ ] V1 overlay injection: analysis badges next to CVE rows in V1 console
-- [ ] V1 action automation: dismiss/accept/remediate via Blueprint
-- [ ] V1 SPA navigation handling (re-inject on page change)
+## v1.3: V1 Console Automation (scripts/automate/)
+- [x] T008: Automate sub-module with plan-based architecture (2026-04-30)
+- [x] T008a: JS payloads for V1 DOM interaction (automate/js.py)
+- [x] T008b: Action plan builders — dismiss, accept, overlay, read (automate/actions.py)
+- [x] T008c: Unified CLI with automate sub-commands (executor.py)
+- [ ] T009: Live test automation against V1 console (requires Blueprint MCP + V1 tab)
+- [ ] T010: V1 SPA navigation handling (re-inject overlays on page change)
+- [ ] T011: Bulk CVE triage workflow (auto-dismiss non-relevant, accept low-risk, flag critical)
+- [ ] T012: V1 page data scraper — extract data not available via API (policy details, etc)
