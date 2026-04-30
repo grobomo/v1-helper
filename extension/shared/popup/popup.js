@@ -1,43 +1,19 @@
 /**
  * V1 Helper — Popup script.
- * Based on Blueprint Extra MCP popup, rebranded for Vision One.
- * Removed: PRO/Free mode, JWT auth, login, beer button.
- * Added: CVE analysis data import/stats.
+ * Manages CVE analysis data, overlay toggle, and V1 API settings.
  */
 
 const browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
 
-function detectBrowserName() {
-  const manifest = browserAPI.runtime.getManifest();
-  const match = manifest.name.match(/V1 Helper for (\w+)/);
-  return match ? match[1] : 'Chrome';
-}
-
-const browserName = detectBrowserName();
-
-function log(...args) {
-  if (state?.debugMode) {
-    const t = new Date().toISOString().slice(11, 23);
-    console.log(`[V1 Helper] ${t}`, ...args);
-  }
-}
-
 let state = {
   enabled: true,
-  currentTabConnected: false,
-  stealthMode: null,
-  anyConnected: false,
-  connecting: false,
   showSettings: false,
-  port: '5555',
-  debugMode: false,
-  version: '0.1.0',
-  projectName: null,
+  version: '0.2.0',
   // V1 API settings
   v1ApiKey: '',
   v1Region: 'us-east-1',
   v1CustomerContext: '',
-  v1TestResult: null, // null | 'testing' | 'ok' | 'error:message'
+  v1TestResult: null, // null | 'testing' | 'ok:msg' | 'error:msg'
   // V1 analysis state
   analysisCount: 0,
   analysisRelevant: 0,
@@ -50,40 +26,15 @@ let state = {
   cveEntries: [],
 };
 
-// --- Status ---
-
-async function updateStatus() {
-  const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
-  const currentTab = tabs[0];
-  let response;
-  try {
-    response = await browserAPI.runtime.sendMessage({ type: 'getConnectionStatus' });
-  } catch {
-    // Service worker not ready yet — use defaults
-    response = {};
-  }
-
-  const connectedTabId = response?.connectedTabId;
-  state.anyConnected = response?.connected === true;
-  state.currentTabConnected = currentTab?.id === connectedTabId;
-  state.stealthMode = state.currentTabConnected ? (response?.stealthMode ?? null) : null;
-  state.projectName = response?.projectName || null;
-
-  const storage = await browserAPI.storage.local.get(['extensionEnabled']);
-  state.connecting = (storage.extensionEnabled !== false) && !state.anyConnected;
-
-  render();
-}
+// --- State Management ---
 
 async function loadState() {
   const storage = await browserAPI.storage.local.get([
-    'extensionEnabled', 'mcpPort', 'debugMode', 'v1h_overlay_enabled',
+    'extensionEnabled', 'v1h_overlay_enabled',
     'v1h_api_key', 'v1h_region', 'v1h_customer_context'
   ]);
 
   state.enabled = storage.extensionEnabled !== false;
-  state.port = storage.mcpPort || '5555';
-  state.debugMode = storage.debugMode || false;
   state.overlayEnabled = storage.v1h_overlay_enabled !== false;
   state.v1ApiKey = storage.v1h_api_key || '';
   state.v1Region = storage.v1h_region || 'us-east-1';
@@ -151,27 +102,20 @@ async function toggleEnabled() {
 // --- Settings ---
 
 async function saveSettings() {
-  const stored = await browserAPI.storage.local.get('mcpPort');
-  const portChanged = stored.mcpPort != null && state.port !== stored.mcpPort;
   await browserAPI.storage.local.set({
-    mcpPort: state.port,
-    debugMode: state.debugMode,
     v1h_api_key: state.v1ApiKey,
     v1h_region: state.v1Region,
     v1h_customer_context: state.v1CustomerContext,
   });
   state.showSettings = false;
   state.v1TestResult = null;
-  if (portChanged) browserAPI.runtime.reload();
   render();
 }
 
 async function cancelSettings() {
   const storage = await browserAPI.storage.local.get([
-    'mcpPort', 'debugMode', 'v1h_api_key', 'v1h_region', 'v1h_customer_context'
+    'v1h_api_key', 'v1h_region', 'v1h_customer_context'
   ]);
-  state.port = storage.mcpPort || '5555';
-  state.debugMode = storage.debugMode || false;
   state.v1ApiKey = storage.v1h_api_key || '';
   state.v1Region = storage.v1h_region || 'us-east-1';
   state.v1CustomerContext = storage.v1h_customer_context || '';
@@ -231,6 +175,59 @@ function render() {
   attachEventListeners();
 }
 
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderMain() {
+  return `
+    <div class="popup-container">
+      <div class="popup-header">
+        <img src="/icons/icon-32.png" alt="V1 Helper" class="header-icon" />
+        <h1>V1 Helper<span class="version-label">v${state.version}</span></h1>
+      </div>
+      <div class="popup-content">
+        <!-- CVE Analysis Section -->
+        <div class="v1-section">
+          <h3>CVE Analysis</h3>
+          ${state.analysisCount > 0 ? `
+            <div class="v1-stat"><span class="v1-stat-label">CVEs loaded</span><span class="v1-stat-value">${state.analysisCount}</span></div>
+            <div class="v1-stat"><span class="v1-stat-label">Relevant</span><span class="v1-stat-value" style="color:#D71920">${state.analysisRelevant}</span></div>
+            <div class="v1-stat"><span class="v1-stat-label">Low priority</span><span class="v1-stat-value" style="color:#856404">${state.analysisLow}</span></div>
+            <div class="v1-stat"><span class="v1-stat-label">Not relevant</span><span class="v1-stat-value" style="color:#155724">${state.analysisNo}</span></div>
+          ` : `
+            <p style="font-size:12px;color:#666">No analysis loaded. Import analysis.json to see CVE overlays on V1 Container Security pages.</p>
+          `}
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="v1-import-btn" id="importAnalysisBtn" style="flex:1">Import analysis.json</button>
+            ${state.analysisCount > 0 ? `
+              <button class="v1-import-btn" id="viewCvesBtn" style="flex:1">View CVEs</button>
+              <button class="v1-import-btn" id="injectOverlayBtn"
+                style="flex:1;background:${state.overlayEnabled ? '#16a34a' : '#9ca3af'}"
+                title="${state.overlayEnabled ? 'Overlays auto-inject on V1 pages' : 'Overlays disabled'}">
+                ${state.overlayEnabled ? 'Overlays On' : 'Overlays Off'}
+              </button>
+            ` : ''}
+          </div>
+          <input type="file" id="analysisFileInput" class="v1-file-input" accept=".json" />
+        </div>
+
+        <div class="toggle-row">
+          <button class="toggle-button ${state.enabled ? 'enabled' : 'disabled'}" id="toggleButton">
+            ${state.enabled ? 'Disable' : 'Enable'}
+          </button>
+        </div>
+
+        <div class="links-section">
+          <button class="settings-link" id="settingsButton">Settings</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderSettings() {
   const regionOptions = Object.entries(V1_REGIONS).map(([key, val]) =>
     `<option value="${key}" ${state.v1Region === key ? 'selected' : ''}>${val.label}</option>`
@@ -244,9 +241,9 @@ function renderSettings() {
   if (state.v1TestResult === 'testing') {
     testResultHtml = '<span class="settings-test testing">Testing...</span>';
   } else if (state.v1TestResult?.startsWith('ok:')) {
-    testResultHtml = `<span class="settings-test ok">${escPopup(state.v1TestResult.slice(3))}</span>`;
+    testResultHtml = `<span class="settings-test ok">${esc(state.v1TestResult.slice(3))}</span>`;
   } else if (state.v1TestResult?.startsWith('error:')) {
-    testResultHtml = `<span class="settings-test error">${escPopup(state.v1TestResult.slice(6))}</span>`;
+    testResultHtml = `<span class="settings-test error">${esc(state.v1TestResult.slice(6))}</span>`;
   }
 
   return `
@@ -286,23 +283,9 @@ function renderSettings() {
           <label class="settings-label">
             <textarea class="settings-textarea" id="customerContextInput"
               placeholder="Describe the customer environment: managed K8s type, runtime packages, workload purposes..."
-              rows="4">${escPopup(state.v1CustomerContext)}</textarea>
+              rows="4">${esc(state.v1CustomerContext)}</textarea>
           </label>
           <p class="settings-help">Used for CVE relevance reasoning. Markdown supported.</p>
-
-          <div class="settings-divider"></div>
-          <div class="settings-section-title">MCP Server</div>
-          <label class="settings-label">
-            Port:
-            <input type="number" class="settings-input" id="portInput"
-              value="${state.port}" min="1" max="65535" placeholder="5555" />
-          </label>
-
-          <label class="settings-label" style="display:flex;align-items:center;cursor:pointer;flex-direction:row;gap:10px">
-            <input type="checkbox" id="debugModeCheckbox" ${state.debugMode ? 'checked' : ''}
-              style="width:18px;height:18px;cursor:pointer;flex-shrink:0" />
-            <span>Debug Mode</span>
-          </label>
         </div>
         <div class="settings-actions">
           <button class="settings-button save" id="saveButton">Save</button>
@@ -311,12 +294,6 @@ function renderSettings() {
       </div>
     </div>
   `;
-}
-
-function escPopup(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
 }
 
 function getFilteredCves() {
@@ -347,12 +324,12 @@ function renderCveList() {
     return `
       <div class="cve-row">
         <div class="cve-row-top">
-          <span class="cve-id">${escPopup(e.cve || '')}</span>
+          <span class="cve-id">${esc(e.cve || '')}</span>
           <span class="cve-badge" style="background:${c.bg};border-color:${c.border};color:${c.text}">
-            ${escPopup(c.label)}
+            ${esc(c.label)}
           </span>
         </div>
-        ${truncated ? `<div class="cve-summary">${escPopup(truncated)}</div>` : ''}
+        ${truncated ? `<div class="cve-summary">${esc(truncated)}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -381,83 +358,6 @@ function renderCveList() {
             Copy ${filtered.length} CVE ID${filtered.length !== 1 ? 's' : ''}
           </button>
           <button class="cve-action-btn secondary" id="cveBackBtn">Back</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderMain() {
-  const statusClass = state.connecting ? 'connecting' : state.anyConnected ? 'connected' : 'disconnected';
-  const statusText = state.connecting ? 'Connecting' : state.anyConnected ? 'Connected' : 'Disconnected';
-
-  return `
-    <div class="popup-container">
-      <div class="popup-header">
-        <img src="/icons/icon-32.png" alt="V1 Helper" class="header-icon" />
-        <h1>V1 Helper<span class="version-label">v${state.version}</span></h1>
-      </div>
-      <div class="popup-content">
-        <div class="status-row">
-          <span class="status-label">MCP Status:</span>
-          <div class="status-indicator">
-            <span class="status-dot ${statusClass}"></span>
-            <span class="status-text">${statusText}</span>
-          </div>
-        </div>
-
-        <div class="status-row">
-          <span class="status-label">This tab:</span>
-          <span class="status-text">${state.currentTabConnected ? '✓ Automated' : 'Not automated'}</span>
-        </div>
-
-        ${state.currentTabConnected && state.projectName ? `
-          <div class="status-row">
-            <span class="status-label"></span>
-            <span class="status-text" style="font-size:0.9em;color:#666">${state.projectName}</span>
-          </div>
-        ` : ''}
-
-        ${state.currentTabConnected ? `
-          <div class="status-row">
-            <span class="status-label">Stealth:</span>
-            <span class="status-text">${state.stealthMode === null ? 'N/A' : state.stealthMode ? 'On' : 'Off'}</span>
-          </div>
-        ` : ''}
-
-        <div class="toggle-row">
-          <button class="toggle-button ${state.enabled ? 'enabled' : 'disabled'}" id="toggleButton">
-            ${state.enabled ? 'Disable' : 'Enable'}
-          </button>
-        </div>
-
-        <!-- V1 Analysis Section -->
-        <div class="v1-section">
-          <h3>CVE Analysis</h3>
-          ${state.analysisCount > 0 ? `
-            <div class="v1-stat"><span class="v1-stat-label">CVEs loaded</span><span class="v1-stat-value">${state.analysisCount}</span></div>
-            <div class="v1-stat"><span class="v1-stat-label">Relevant</span><span class="v1-stat-value" style="color:#D71920">${state.analysisRelevant}</span></div>
-            <div class="v1-stat"><span class="v1-stat-label">Low priority</span><span class="v1-stat-value" style="color:#856404">${state.analysisLow}</span></div>
-            <div class="v1-stat"><span class="v1-stat-label">Not relevant</span><span class="v1-stat-value" style="color:#155724">${state.analysisNo}</span></div>
-          ` : `
-            <p style="font-size:12px;color:#666">No analysis loaded. Import analysis.json to see CVE overlays in V1 console.</p>
-          `}
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <button class="v1-import-btn" id="importAnalysisBtn" style="flex:1">Import</button>
-            ${state.analysisCount > 0 ? `
-              <button class="v1-import-btn" id="viewCvesBtn" style="flex:1">View CVEs</button>
-              <button class="v1-import-btn" id="injectOverlayBtn"
-                style="flex:1;background:${state.overlayEnabled ? '#16a34a' : '#9ca3af'}"
-                title="${state.overlayEnabled ? 'Overlays auto-inject on V1 pages' : 'Overlays disabled'}">
-                ${state.overlayEnabled ? 'Overlays On' : 'Overlays Off'}
-              </button>
-            ` : ''}
-          </div>
-          <input type="file" id="analysisFileInput" class="v1-file-input" accept=".json" />
-        </div>
-
-        <div class="links-section">
-          <button class="settings-link" id="settingsButton">Settings</button>
         </div>
       </div>
     </div>
@@ -495,10 +395,6 @@ function attachEventListeners() {
     document.getElementById('saveButton')?.addEventListener('click', saveSettings);
     document.getElementById('cancelButton')?.addEventListener('click', cancelSettings);
     document.getElementById('testConnectionBtn')?.addEventListener('click', testV1Connection);
-    const portInput = document.getElementById('portInput');
-    if (portInput) portInput.addEventListener('input', (e) => { state.port = e.target.value; });
-    const debugCb = document.getElementById('debugModeCheckbox');
-    if (debugCb) debugCb.addEventListener('change', (e) => { state.debugMode = e.target.checked; });
     const apiKeyInput = document.getElementById('v1ApiKeyInput');
     if (apiKeyInput) apiKeyInput.addEventListener('input', (e) => { state.v1ApiKey = e.target.value; });
     const regionSelect = document.getElementById('v1RegionSelect');
@@ -531,7 +427,6 @@ function attachEventListeners() {
     document.getElementById('injectOverlayBtn')?.addEventListener('click', async () => {
       state.overlayEnabled = !state.overlayEnabled;
       await browserAPI.storage.local.set({ v1h_overlay_enabled: state.overlayEnabled });
-      // Notify active tab
       const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
       if (tabs[0]) {
         browserAPI.tabs.sendMessage(tabs[0].id, {
@@ -548,16 +443,15 @@ function attachEventListeners() {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     await loadState();
-    await updateStatus();
-
-    browserAPI.runtime.onMessage.addListener((msg) => {
-      if (msg.type === 'statusChanged') updateStatus();
-    });
-    browserAPI.tabs.onActivated.addListener(updateStatus);
     browserAPI.storage.onChanged.addListener(async (changes, area) => {
-      if (area === 'local' && changes.extensionEnabled) {
-        state.enabled = changes.extensionEnabled.newValue !== false;
-        await updateStatus();
+      if (area === 'local') {
+        if (changes.extensionEnabled) {
+          state.enabled = changes.extensionEnabled.newValue !== false;
+        }
+        if (changes.v1h_analysis) {
+          await loadAnalysisStats();
+        }
+        render();
       }
     });
   } catch (error) {
