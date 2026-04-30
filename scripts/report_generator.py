@@ -706,7 +706,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None, v1_inventory
 
         # Raw event data + XDR query + results (all collapsed together)
         raw_json = json.dumps(e, indent=2, default=str)
-        api_url = "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesEvaluationEventLogs"
+        api_url = f"{api_base or API_BASES['us-east-1']}/v3.0/containerSecurity/kubernetesEvaluationEventLogs"
         copy_id += 1
         raw_inner = ""
         # XDR search query
