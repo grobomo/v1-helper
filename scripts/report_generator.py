@@ -739,7 +739,7 @@ def build_events_html(eval_events, sensor_events, xdr_results=None, v1_inventory
         # API curl — XDR container activity search with server-side filter
         if xdr_q:
             copy_id += 1
-            xdr_curl = f'curl -s -H "Authorization: Bearer YOUR_API_KEY" -H \'TMV1-Query: clusterName:{cluster} and k8sNamespace:{namespace}\' "https://api.xdr.trendmicro.com/v3.0/search/containerActivities?top=50"'
+            xdr_curl = f'curl -s -H "Authorization: Bearer YOUR_API_KEY" -H \'TMV1-Query: clusterName:{cluster} and k8sNamespace:{namespace}\' "{api_base or API_BASES["us-east-1"]}/v3.0/search/containerActivities?top=50"'
             raw_inner += f"""<div class="xdr-query-box" style="margin-bottom:8px">
 <span class="xdr-label">API:</span>
 <code id="api-{copy_id}">{html_mod.escape(xdr_curl)}</code>
@@ -1332,7 +1332,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <div class="section-body">
 <p><strong>Total:</strong> {len(eval_events or []) + len(sensor_events or [])} events | <strong>Need action:</strong> {sum(1 for ci in critical_items if ci['type']=='Runtime')}</p>
 <p><em><span style="color:#e94560">Red border</span> = needs action.</em></p>
-{build_events_html(eval_events or [], sensor_events or [], xdr_results, v1_container_inventory)}
+{build_events_html(eval_events or [], sensor_events or [], xdr_results, v1_container_inventory, API_BASES.get(region, API_BASES['us-east-1']))}
   </div>
 </div>
 
