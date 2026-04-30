@@ -212,6 +212,20 @@ async function runTest() {
     // 7. CVE Overlay injection test
     console.log('\n--- CVE Overlay ---');
 
+    // Re-acquire service worker (MV3 may have suspended the old one)
+    sw = context.serviceWorkers().find(w => w.url().includes(extensionId));
+    if (!sw) {
+      // Wake it by opening extension page
+      const wakePage = await context.newPage();
+      await wakePage.goto(`chrome-extension://${extensionId}/chrome/popup.html`);
+      await wakePage.waitForLoadState('domcontentloaded');
+      await new Promise(r => setTimeout(r, 500));
+      sw = context.serviceWorkers().find(w => w.url().includes(extensionId))
+           || await context.waitForEvent('serviceworker', { timeout: 5000 });
+      await wakePage.close();
+    }
+    assert('Service worker re-acquired for overlay tests', !!sw);
+
     // Store mock analysis data directly in extension storage
     const mockAnalysis = {
       'CVE-2024-1234': {
