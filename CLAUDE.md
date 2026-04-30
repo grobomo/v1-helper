@@ -17,6 +17,9 @@ python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.js
 # Skip Claude LLM analysis (use existing analysis.json)
 python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.json --skip-llm
 
+# Compare against previous run (diff section in report)
+python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.json --prev reports/ep-prev-data.json --skip-llm
+
 # --- Automation ---
 # Generate a plan to dismiss specific CVEs in V1 console
 python scripts/executor.py automate dismiss CVE-2024-1234 CVE-2024-5678
