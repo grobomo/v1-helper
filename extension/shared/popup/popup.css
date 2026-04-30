@@ -684,3 +684,112 @@ body {
 .cve-action-btn:active {
   transform: scale(0.98);
 }
+
+/* --- Settings V1 API --- */
+
+.settings-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.settings-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1c75bc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.settings-divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 12px 0;
+}
+
+.settings-key-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.settings-key-row .settings-input {
+  flex: 1;
+}
+
+.settings-eye {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.settings-eye:hover {
+  background: #f5f5f5;
+}
+
+select.settings-input {
+  appearance: auto;
+  padding: 7px 10px;
+}
+
+.settings-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.settings-textarea:focus {
+  outline: none;
+  border-color: #1c75bc;
+}
+
+.settings-test-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-button.test {
+  background: #f0f7fc;
+  color: #1c75bc;
+  border: 1px solid #1c75bc;
+  padding: 6px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.settings-button.test:hover {
+  background: #e0effa;
+}
+
+.settings-button.test:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.settings-test {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.settings-test.testing {
+  color: #ca8a04;
+}
+
+.settings-test.ok {
+  color: #16a34a;
+}
+
+.settings-test.error {
+  color: #dc2626;
+}
