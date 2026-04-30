@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Side Effects Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #1c75bc;
+    }
+    h2 {
+      color: #155a91;
+      margin-top: 30px;
+    }
+    button, a.btn {
+      background-color: #1c75bc;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button:hover, a.btn:hover {
+      background-color: #155a91;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      border-left: 4px solid #1c75bc;
+    }
+    .description {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    #status {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px;
+      background: #4CAF50;
+      color: white;
+      border-radius: 4px;
+      display: none;
+    }
+    iframe {
+      border: 2px solid #1c75bc;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Click Side Effects Test Page</h1>
+  <p>This page tests comprehensive side effect detection for click interactions.</p>
+
+  <!-- Navigation Tests -->
+  <h2>1. Navigation Side Effects</h2>
+
+  <div class="test-section">
+    <p class="description">Test 1.1: Simple navigation via link click</p>
+    <a href="form-result.html" id="nav-link">Navigate to Form Result Page</a>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 1.2: Navigation via button with location.href</p>
+    <button id="nav-button">Navigate with Button</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 1.3: Same-page anchor navigation</p>
+    <a href="#section-bottom">Jump to Bottom</a>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 1.4: External navigation (opens in current tab)</p>
+    <a href="https://example.org" id="external-link">Navigate to Example.org</a>
+  </div>
+
+  <!-- Dialog Tests -->
+  <h2>2. Dialog Side Effects</h2>
+
+  <div class="test-section">
+    <p class="description">Test 2.1: Alert dialog</p>
+    <button id="alert-button">Show Alert</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 2.2: Confirm dialog (auto-accept)</p>
+    <button id="confirm-button">Show Confirm</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 2.3: Prompt dialog (auto-fill)</p>
+    <button id="prompt-button">Show Prompt</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 2.4: Multiple dialogs</p>
+    <button id="multi-dialog-button">Show Multiple Dialogs</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 2.5: Dialog + Navigation combo</p>
+    <button id="dialog-nav-button">Confirm Then Navigate</button>
+  </div>
+
+  <!-- Popup/Window Tests -->
+  <h2>3. New Tab/Window Side Effects</h2>
+
+  <div class="test-section">
+    <p class="description">Test 3.1: Open new window (likely blocked by popup blocker)</p>
+    <button id="popup-button">Open Popup Window</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 3.2: Open link in new tab (target=_blank)</p>
+    <a href="https://example.com" target="_blank" id="new-tab-link">Open in New Tab</a>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 3.3: Open multiple popups</p>
+    <button id="multi-popup-button">Open Multiple Popups</button>
+  </div>
+
+  <!-- Combined Side Effects -->
+  <h2>4. Combined Side Effects</h2>
+
+  <div class="test-section">
+    <p class="description">Test 4.1: Alert + Popup + Navigation</p>
+    <button id="combo-button">Trigger Everything</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 4.2: Popup + Dialog (both blocked/handled)</p>
+    <button id="popup-dialog-button">Popup + Dialog Combo</button>
+  </div>
+
+  <!-- IFrame Tests -->
+  <h2>5. IFrame Side Effects</h2>
+
+  <div class="test-section">
+    <p class="description">Test 5.1: Add dynamic iframe</p>
+    <button id="add-iframe-button">Add IFrame</button>
+    <div id="iframe-container"></div>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 5.2: Remove iframe</p>
+    <button id="remove-iframe-button">Remove Last IFrame</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 5.3: Click inside iframe navigation</p>
+    <iframe id="test-iframe" src="about:blank" width="400" height="150"></iframe>
+  </div>
+
+  <!-- No Side Effects (Control) -->
+  <h2>6. No Side Effects (Control Tests)</h2>
+
+  <div class="test-section">
+    <p class="description">Test 6.1: Button with no action</p>
+    <button id="no-op-button">Do Nothing</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 6.2: Button that only logs to console</p>
+    <button id="console-button">Log to Console</button>
+  </div>
+
+  <div class="test-section">
+    <p class="description">Test 6.3: Button that changes text</p>
+    <button id="text-button">Change My Text</button>
+  </div>
+
+  <!-- Anchor for same-page navigation -->
+  <div id="section-bottom" style="margin-top: 800px;">
+    <h2>Bottom Section</h2>
+    <p>You've scrolled to the bottom via anchor navigation!</p>
+    <a href="#">Back to Top</a>
+  </div>
+
+  <!-- Status indicator -->
+  <div id="status"></div>
+
+  <script>
+    // Navigation Tests
+    document.getElementById('nav-button').addEventListener('click', () => {
+      setTimeout(() => {
+        window.location.href = 'login-success.html';
+      }, 100);
+    });
+
+    // Dialog Tests
+    document.getElementById('alert-button').addEventListener('click', () => {
+      alert('This is a test alert!');
+    });
+
+    document.getElementById('confirm-button').addEventListener('click', () => {
+      const result = confirm('Do you want to continue?');
+      console.log('Confirm result:', result);
+    });
+
+    document.getElementById('prompt-button').addEventListener('click', () => {
+      const result = prompt('Enter your name:', 'Claude');
+      console.log('Prompt result:', result);
+    });
+
+    document.getElementById('multi-dialog-button').addEventListener('click', () => {
+      alert('First alert');
+      confirm('Then a confirm');
+      prompt('Finally a prompt', 'test');
+    });
+
+    document.getElementById('dialog-nav-button').addEventListener('click', () => {
+      const result = confirm('Navigate to form result page?');
+      if (result) {
+        setTimeout(() => {
+          window.location.href = 'form-result.html';
+        }, 100);
+      }
+    });
+
+    // Popup/Window Tests
+    document.getElementById('popup-button').addEventListener('click', () => {
+      const popup = window.open('https://example.com', 'popup', 'width=400,height=300');
+      if (!popup) {
+        console.log('Popup was blocked');
+      } else {
+        console.log('Popup opened:', popup);
+      }
+    });
+
+    document.getElementById('multi-popup-button').addEventListener('click', () => {
+      window.open('https://example.com', '_blank');
+      window.open('https://example.org', '_blank');
+      window.open('about:blank', '_blank');
+    });
+
+    // Combined Side Effects
+    document.getElementById('combo-button').addEventListener('click', () => {
+      alert('Step 1: Alert');
+      window.open('https://example.com', '_blank');
+      setTimeout(() => {
+        window.location.href = 'form-result.html';
+      }, 100);
+    });
+
+    document.getElementById('popup-dialog-button').addEventListener('click', () => {
+      window.open('https://example.com', 'test', 'width=300,height=200');
+      alert('Popup opened (may be blocked)');
+      confirm('Did you see the popup?');
+    });
+
+    // IFrame Tests
+    let iframeCount = 0;
+    document.getElementById('add-iframe-button').addEventListener('click', () => {
+      const iframe = document.createElement('iframe');
+      iframe.id = 'dynamic-iframe-' + (++iframeCount);
+      iframe.src = 'about:blank';
+      iframe.width = '300';
+      iframe.height = '100';
+      document.getElementById('iframe-container').appendChild(iframe);
+      showStatus('IFrame added: ' + iframe.id);
+    });
+
+    document.getElementById('remove-iframe-button').addEventListener('click', () => {
+      const container = document.getElementById('iframe-container');
+      const iframes = container.querySelectorAll('iframe');
+      if (iframes.length > 0) {
+        const last = iframes[iframes.length - 1];
+        showStatus('IFrame removed: ' + last.id);
+        last.remove();
+      } else {
+        showStatus('No iframes to remove');
+      }
+    });
+
+    // Control Tests
+    document.getElementById('no-op-button').addEventListener('click', () => {
+      // Intentionally does nothing
+    });
+
+    document.getElementById('console-button').addEventListener('click', () => {
+      console.log('Console log test - no side effects');
+    });
+
+    document.getElementById('text-button').addEventListener('click', function() {
+      if (this.textContent === 'Change My Text') {
+        this.textContent = 'Text Changed!';
+      } else {
+        this.textContent = 'Change My Text';
+      }
+    });
+
+    // Helper function
+    function showStatus(message) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.style.display = 'block';
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 2000);
+    }
+
+    console.log('Side effects test page loaded');
+  </script>
+</body>
+</html>
