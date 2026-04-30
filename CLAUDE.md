@@ -99,7 +99,9 @@ python scripts/report_generator.py --customer acme --cached reports/acme-raw-dat
 ## Report Features
 
 - **Critical Findings** — clickable jump links to high-severity, high-relevance items
+- **Changes Since Last Run** — diff section showing new, resolved, and severity-changed CVEs
 - **CVE Analysis** — per-CVE reasoning with relevance section tied to customer context
+- **V1 Console Deep Links** — per-CVE "V1" button linking to region-aware container security page
 - **Runtime Event Analysis** — MITRE ATT&CK mapping, command-specific analysis
 - **XDR Queries** — copy-pasteable curl commands with proper headers
 - **Raw Event Data** — collapsible JSON + API reference per event
