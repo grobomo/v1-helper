@@ -1,8 +1,10 @@
 # v1-helper TODO
 
 ## Session Handoff
-T018 done (extension launch fix), T011 done (bulk triage). PDF export WIP in worktree-pdf-export.
-K8s labels blocked — V1 API doesn't return labels in kubernetesImageOccurrences.
+This session: T018 (extension launch — enterprise Chrome blocks side-loads, use Playwright Chromium), T011 (bulk triage — dry-run preview, dismiss/accept plans, SRE flagging). CLAUDE.md updated.
+PDF export WIP in worktree-pdf-export branch — html2pdf.js CDN load, mostly done.
+K8s labels blocked (V1 API). T009/T012 blocked (need V1 login password).
+Next: store V1 login password to unblock T009/T012, or lab infrastructure.
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
