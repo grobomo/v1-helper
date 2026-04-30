@@ -1,8 +1,9 @@
 # v1-helper TODO
 
 ## Session Handoff
-This session: V1 deep links (region-aware portal URLs, per-CVE buttons, fixed wrong links) + diff analysis (--prev flag, auto-compare on fresh runs, new/resolved/changed section in report). CLAUDE.md updated.
-Next: Kubernetes labels in grouping, PDF export, or historic trend analysis.
+Extension fix: enterprise Chrome blocks side-loaded extensions. Added launch-extension.js (uses Playwright Chromium). 54/54 tests passing.
+PDF export WIP in worktree `pdf-export` (worktree-pdf-export branch).
+K8s labels blocked — V1 API doesn't return labels in kubernetesImageOccurrences.
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
@@ -10,6 +11,7 @@ Next: Kubernetes labels in grouping, PDF export, or historic trend analysis.
 - [x] T015: CVE list view in popup — filter by relevance (All/Relevant/Low/None), copy CVE IDs to clipboard, 40-point test suite
 - [x] T016: V1 settings — API key (masked + toggle), region selector (5 regions), test connection, customer context, 53-point test suite
 - [x] T017: Extension verified — 53-point Playwright test (service worker, popup, V1 settings, content script, icons, overlay, CVE list)
+- [x] T018: Fix extension not loading — enterprise Chrome blocks side-loaded extensions. Added launch-extension.js (Playwright Chromium). 54/54 tests.
 
 ## Priority 2: Reports
 - [x] T007: Per-cluster report sections — images grouped under cluster headers with protection status, sorted by CVE count
