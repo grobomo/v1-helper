@@ -1,22 +1,18 @@
 # v1-helper TODO
 
 ## Session Handoff
-Architecture reset. Created VISION.md, brainstorming.md, roadmap.md.
-Key insight: extension has wrong architecture — it's a fork of Blueprint MCP with CVE overlays bolted on.
-Must strip MCP bridge code, remove Playwright dependency, make it a pure Chrome extension.
-Lab EC2 instance running (i-04cc9b51b45291988, 3.144.209.155) but cloud-init failed (base64 encoding issue). Needs manual fix or teardown.
-PDF export WIP in worktree-pdf-export branch.
+Phase 1 complete. Extension stripped to pure CVE overlay tool — no MCP bridge, no Playwright.
+48-point validation tests passing. Lab EC2 terminated. PDF export WIP in worktree-pdf-export.
+Next: Phase 2 — verify extension on real V1 pages (needs V1 login password).
 
-## Phase 1: Clean Architecture (ACTIVE)
-Strip the extension to its core purpose. Remove Playwright.
-
-- [ ] T019: Remove MCP bridge code from extension (WebSocket, tab handlers, network tracker, dialog handler, console handler, install handler)
-- [ ] T020: Remove Playwright-dependent scripts (launch-extension.js, load-analysis.js)
-- [ ] T021: Clean up popup — remove MCP status display, focus on: import analysis, view CVEs, toggle overlays, settings
-- [ ] T022: Remove duplicate icon sets (extension/icons/ vs extension/chrome/icons/)
-- [ ] T023: Remove deprecated v1_actions.py
-- [ ] T024: Write Chrome developer mode install instructions
-- [ ] T025: Rewrite tests without Playwright dependency
+## Phase 1: Clean Architecture (DONE)
+- [x] T019: Remove MCP bridge code (1932-line background script -> 67 lines)
+- [x] T020: Archive Playwright scripts (launch-extension.js, load-analysis.js, tests)
+- [x] T021: Clean popup (remove MCP status, port, stealth mode)
+- [x] T022: Archive duplicate icon sets + MCP status icons
+- [x] T023: Archive deprecated v1_actions.py
+- [x] T024: Chrome developer mode install instructions (extension/INSTALL.md)
+- [x] T025: 48-point validation tests without Playwright (tests/extension-validate.js)
 
 ## Phase 2: Verify on V1 (needs V1 login)
 - [ ] T009: Store V1 login password in credential-manager
@@ -59,7 +55,6 @@ Strip the extension to its core purpose. Remove Playwright.
 - `v1-api/V1_API_KEY` — full permissions, Alerts+Clusters+OAT verified 200
 - `v1-api/EP_API_KEY` — customer key, Alerts verified 200
 
-### Active infrastructure
-- EC2: i-04cc9b51b45291988 (t3.medium spot, 3.144.209.155) — needs cloud-init fix or teardown
-- SG: sg-0a21cd8d514293389 (v1-lab-sg)
-- Key: v1-lab-key (config/v1-lab-key.pem)
+### AWS resources (no instances running)
+- SG: sg-0a21cd8d514293389 (v1-lab-sg) — kept for next provision
+- Key: v1-lab-key — kept in AWS, local .pem in config/
