@@ -1,8 +1,7 @@
 # v1-helper TODO
 
 ## Session Handoff
-Extension fix: enterprise Chrome blocks side-loaded extensions. Added launch-extension.js (uses Playwright Chromium). 54/54 tests passing.
-PDF export WIP in worktree `pdf-export` (worktree-pdf-export branch).
+T018 done (extension launch fix), T011 done (bulk triage). PDF export WIP in worktree-pdf-export.
 K8s labels blocked — V1 API doesn't return labels in kubernetesImageOccurrences.
 
 ## Priority 1: Chrome Extension
@@ -26,7 +25,7 @@ K8s labels blocked — V1 API doesn't return labels in kubernetesImageOccurrence
 ## Priority 3: Automation Tooling
 - [ ] T009: Live test automation against V1 console — BLOCKED: need V1 login password stored in credential-manager
 - [x] T010: V1 SPA navigation handling — implemented in T014 content script (MutationObserver URL watcher)
-- [ ] T011: Bulk CVE triage workflow (auto-dismiss non-relevant, accept low-risk, flag critical)
+- [x] T011: Bulk CVE triage workflow — `automate triage --dry-run`, dismiss/accept plans, SRE flagging
 - [ ] T012: V1 page data scraper — extract data not available via API (policy details, etc)
 
 ## Priority 4: Lab Infrastructure
