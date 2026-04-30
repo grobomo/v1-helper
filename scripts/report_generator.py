@@ -32,20 +32,22 @@ REPORTS_DIR = PROJECT_ROOT / "reports"
 # V1 API
 # ============================================================
 
+API_BASES = {
+    "us-east-1": "https://api.xdr.trendmicro.com",
+    "eu-central-1": "https://api.eu.xdr.trendmicro.com",
+    "ap-southeast-1": "https://api.sg.xdr.trendmicro.com",
+    "ap-northeast-1": "https://api.jp.xdr.trendmicro.com",
+    "ap-southeast-2": "https://api.au.xdr.trendmicro.com",
+}
+
+
 class V1:
     def __init__(self, region="us-east-1", api_key_name="v1-api/V1_API_KEY"):
         self.key = cred_resolve(api_key_name)
         if not self.key:
             raise RuntimeError(f"No {api_key_name} in credential store. Run: python -c \"import sys; sys.path.insert(0,'~/.claude/skills/credential-manager'); from claude_cred import store; store('{api_key_name}', input('API Key: '))\"")
         self.key = self.key.strip()
-        bases = {
-            "us-east-1": "https://api.xdr.trendmicro.com",
-            "eu-central-1": "https://api.eu.xdr.trendmicro.com",
-            "ap-southeast-1": "https://api.sg.xdr.trendmicro.com",
-            "ap-northeast-1": "https://api.jp.xdr.trendmicro.com",
-            "ap-southeast-2": "https://api.au.xdr.trendmicro.com",
-        }
-        self.base = bases.get(region, bases["us-east-1"])
+        self.base = API_BASES.get(region, API_BASES["us-east-1"])
         self.h = {"Authorization": f"Bearer {self.key}"}
 
     def _pages(self, path, params=None, max_pages=20):
@@ -608,7 +610,7 @@ def _analyze_event(vtype, commands, images, objects, cluster, namespace):
         return {"severity": "low", "relevant": "low", "title": str(ctx), "analysis": "", "action": ""}
 
 
-def build_events_html(eval_events, sensor_events, xdr_results=None):
+def build_events_html(eval_events, sensor_events, xdr_results=None, v1_inventory_url=None, api_base=None):
     """Build HTML section for non-CVE runtime detections with analysis and XDR queries."""
     if not eval_events and not sensor_events:
         return ""
@@ -784,14 +786,26 @@ def build_events_html(eval_events, sensor_events, xdr_results=None):
 </tr>"""
 
     return f"""<table>
-<tr><th>Time</th><th>Cluster</th><th>Namespace</th><th>Kind</th><th>Violation</th><th>Decision</th><th>Action</th><th>Details</th><th>Policy</th><th style="text-align:center"><a href="https://portal.xdr.trendmicro.com/index.html#/app/server-cloud/container-inventory" target="_blank" style="text-decoration:none;color:#fff;background:#0066cc;padding:3px 10px;border-radius:4px;font-size:0.85em;font-weight:700;white-space:nowrap">Open in V1</a></th></tr>
+<tr><th>Time</th><th>Cluster</th><th>Namespace</th><th>Kind</th><th>Violation</th><th>Decision</th><th>Action</th><th>Details</th><th>Policy</th><th style="text-align:center"><a href="{v1_inventory_url or 'https://portal.xdr.trendmicro.com/index.html#/app/server-cloud/container-inventory'}" target="_blank" style="text-decoration:none;color:#fff;background:#0066cc;padding:3px 10px;border-radius:4px;font-size:0.85em;font-weight:700;white-space:nowrap">Open in V1</a></th></tr>
 {rows}
 </table>"""
 
 
-def write_html(findings, analyses, clusters, output_path, eval_events=None, sensor_events=None, xdr_results=None, customer_context=None):
+PORTAL_BASES = {
+    "us-east-1": "https://portal.xdr.trendmicro.com",
+    "eu-central-1": "https://portal.eu.xdr.trendmicro.com",
+    "ap-southeast-1": "https://portal.sg.xdr.trendmicro.com",
+    "ap-northeast-1": "https://portal.jp.xdr.trendmicro.com",
+    "ap-southeast-2": "https://portal.au.xdr.trendmicro.com",
+}
+
+
+def write_html(findings, analyses, clusters, output_path, eval_events=None, sensor_events=None, xdr_results=None, customer_context=None, region="us-east-1"):
     now = datetime.datetime.now()
     customer_context = customer_context or "No customer context provided. Analysis based on general container security best practices."
+    portal_base = PORTAL_BASES.get(region, PORTAL_BASES["us-east-1"])
+    v1_container_vulns = f"{portal_base}/index.html#/app/server-cloud/container-protection"
+    v1_container_inventory = f"{portal_base}/index.html#/app/server-cloud/container-inventory"
     env_label = extract_env_label(customer_context)
     sev_colors = {"critical": "#f8d7da", "high": "#f8d7da", "medium": "#fff3cd", "low": "#d4edda"}
     sev_text = {"critical": "#721c24", "high": "#721c24", "medium": "#856404", "low": "#155724"}
@@ -987,7 +1001,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <td><code>{f["resourceName"]}</code></td>
 <td>{f.get("containerName","-")}</td>
 <td>{f["repository"]}</td>
-<td style="text-align:center"><button class="copy-btn" onclick="navigator.clipboard.writeText('{cve}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy CVE ID',1200)" title="Copy {cve}" style="white-space:nowrap">Copy CVE ID</button></td>
+<td style="text-align:center"><a href="{v1_container_vulns}" target="_blank" class="v1-link" title="Open in V1 Console">V1</a> <button class="copy-btn" onclick="navigator.clipboard.writeText('{cve}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1200)" title="Copy {cve}" style="white-space:nowrap">Copy</button></td>
 </tr>"""
 
         # Full-width analysis row under CVE
@@ -1162,6 +1176,8 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .xdr-label {{ font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--meta); white-space: nowrap; }}
   .copy-btn {{ background: var(--th-bg); color: var(--th-fg); border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.8em; cursor: pointer; white-space: nowrap; transition: background 0.15s; }}
   .copy-btn:hover {{ opacity: 0.85; }}
+  .v1-link {{ display: inline-block; background: #0066cc; color: #fff; text-decoration: none; border-radius: 4px; padding: 3px 8px; font-size: 0.8em; font-weight: 700; white-space: nowrap; transition: background 0.15s; margin-right: 4px; }}
+  .v1-link:hover {{ background: #0052a3; }}
   .xdr-results {{ margin-top: 8px; }}
   .xdr-results .xdr-label {{ display: block; margin-bottom: 4px; }}
   .xdr-table {{ font-size: 0.82em; margin: 4px 0; }}
@@ -1304,7 +1320,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <p>CVSS scores: <strong>Critical:</strong> {sev_totals.get('critical',0)} | <strong>High:</strong> {sev_totals.get('high',0)} | <strong>Medium:</strong> {sev_totals.get('medium',0)} | <strong>Low:</strong> {sev_totals.get('low',0)}</p>
 <p><em>Each CVE has an analysis row below it. <span style="color:#e94560">Red border</span> = needs action.</em></p>
 <table>
-  <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th><th style="text-align:center"><a href="https://portal.xdr.trendmicro.com/index.html#/app/sase" target="_blank" style="text-decoration:none;color:#fff;background:#0066cc;padding:3px 10px;border-radius:4px;font-size:0.85em;font-weight:700;white-space:nowrap">Open in V1</a></th></tr>
+  <tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Package</th><th>Version</th><th>Namespace</th><th>Deployment</th><th>Container</th><th>Image</th><th style="text-align:center"><a href="{v1_container_vulns}" target="_blank" style="text-decoration:none;color:#fff;background:#0066cc;padding:3px 10px;border-radius:4px;font-size:0.85em;font-weight:700;white-space:nowrap">Open in V1</a></th></tr>
 {rows_html}
 </table>
   </div>
@@ -1316,7 +1332,7 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <div class="section-body">
 <p><strong>Total:</strong> {len(eval_events or []) + len(sensor_events or [])} events | <strong>Need action:</strong> {sum(1 for ci in critical_items if ci['type']=='Runtime')}</p>
 <p><em><span style="color:#e94560">Red border</span> = needs action.</em></p>
-{build_events_html(eval_events or [], sensor_events or [], xdr_results)}
+{build_events_html(eval_events or [], sensor_events or [], xdr_results, v1_container_inventory)}
   </div>
 </div>
 
@@ -1327,12 +1343,12 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 <p>Raw API calls used to generate this report. Replace <code>YOUR_API_KEY</code> with your V1 API key from <strong>Administration &gt; API Keys</strong>.</p>
 <table>
   <tr><th>Data</th><th>API Call</th></tr>
-  <tr><td>Clusters</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesClusters"</code></td></tr>
-  <tr><td>Vulnerabilities</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/vulnerabilities?limit=200"</code></td></tr>
-  <tr><td>Image Occurrences</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesImageOccurrences"</code></td></tr>
-  <tr><td>Eval Events</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesEvaluationEventLogs"</code></td></tr>
-  <tr><td>Sensor Events</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "https://api.xdr.trendmicro.com/v3.0/containerSecurity/kubernetesSensorEventLogs"</code></td></tr>
-  <tr><td>Container Activity (XDR)</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" -H 'TMV1-Query: clusterName:YOUR_CLUSTER' "https://api.xdr.trendmicro.com/v3.0/search/containerActivities?top=50"</code></td></tr>
+  <tr><td>Clusters</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "{API_BASES.get(region, API_BASES['us-east-1'])}/v3.0/containerSecurity/kubernetesClusters"</code></td></tr>
+  <tr><td>Vulnerabilities</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "{API_BASES.get(region, API_BASES['us-east-1'])}/v3.0/containerSecurity/vulnerabilities?limit=200"</code></td></tr>
+  <tr><td>Image Occurrences</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "{API_BASES.get(region, API_BASES['us-east-1'])}/v3.0/containerSecurity/kubernetesImageOccurrences"</code></td></tr>
+  <tr><td>Eval Events</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "{API_BASES.get(region, API_BASES['us-east-1'])}/v3.0/containerSecurity/kubernetesEvaluationEventLogs"</code></td></tr>
+  <tr><td>Sensor Events</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" "{API_BASES.get(region, API_BASES['us-east-1'])}/v3.0/containerSecurity/kubernetesSensorEventLogs"</code></td></tr>
+  <tr><td>Container Activity (XDR)</td><td><code>curl -H "Authorization: Bearer YOUR_API_KEY" -H 'TMV1-Query: clusterName:YOUR_CLUSTER' "{API_BASES.get(region, API_BASES['us-east-1'])}/v3.0/search/containerActivities?top=50"</code></td></tr>
 </table>
 <p>See <a href="https://automation.trendmicro.com/xdr/api-v3" target="_blank">V1 API Documentation</a> for full reference.</p>
   </div>
@@ -1613,7 +1629,7 @@ def main():
     if analyses:
         print("Generating relevance reasoning from customer context...")
         generate_relevance(analyses, customer_ctx)
-    write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx)
+    write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx, region)
     print(f"\nReport: {out}")
 
     # Auto-open
