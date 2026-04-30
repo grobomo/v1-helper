@@ -277,6 +277,79 @@ async function runTest() {
     assert('CVE count shows 3', statsText && statsText.includes('3'));
 
     await overlayPage.close();
+
+    // 8. CVE List View
+    console.log('\n--- CVE List View ---');
+
+    // Click "View CVEs" button
+    const viewCvesBtn = await popupCheck.$('#viewCvesBtn');
+    assert('View CVEs button present', !!viewCvesBtn);
+    await viewCvesBtn.click();
+    await popupCheck.waitForSelector('.cve-list', { timeout: 3000 });
+    assert('CVE list view rendered', true);
+
+    // Check filter buttons
+    const filterBtns = await popupCheck.$$('.cve-filter-btn');
+    assert('Four filter buttons rendered', filterBtns.length === 4);
+
+    // Check "All" is active by default
+    const allBtn = await popupCheck.$('.cve-filter-btn.active');
+    const allBtnText = await allBtn.textContent();
+    assert('All filter active by default', allBtnText.includes('All'));
+
+    // Check all 3 CVE rows are shown
+    const cveRows = await popupCheck.$$('.cve-row');
+    assert('All 3 CVEs shown', cveRows.length === 3);
+
+    // Check CVE IDs are visible
+    const firstId = await popupCheck.$eval('.cve-id', el => el.textContent);
+    assert('CVE ID rendered in list', firstId.includes('CVE-'));
+
+    // Check badges are present
+    const listBadges = await popupCheck.$$('.cve-badge');
+    assert('Relevance badges rendered', listBadges.length === 3);
+
+    // Test filter: click "Relevant" — should show 1 CVE
+    const relevantBtn = filterBtns[1];
+    await relevantBtn.click();
+    await new Promise(r => setTimeout(r, 200));
+    const filteredRows = await popupCheck.$$('.cve-row');
+    assert('Relevant filter shows 1 CVE', filteredRows.length === 1);
+
+    // Check the filtered CVE is the relevant one
+    const filteredId = await popupCheck.$eval('.cve-id', el => el.textContent);
+    assert('Relevant CVE is CVE-2024-1234', filteredId.includes('CVE-2024-1234'));
+
+    // Test filter: "None" — should show 1 CVE (re-query after re-render)
+    const noneBtn = await popupCheck.$('.cve-filter-btn[data-filter="no"]');
+    await noneBtn.click();
+    await new Promise(r => setTimeout(r, 200));
+    const noneRows = await popupCheck.$$('.cve-row');
+    assert('None filter shows 1 CVE', noneRows.length === 1);
+
+    // Test Copy CVE IDs button exists with correct count
+    const copyBtn = await popupCheck.$('#copyCveIdsBtn');
+    assert('Copy button present', !!copyBtn);
+    const copyText = await copyBtn.textContent();
+    assert('Copy button shows count', copyText.includes('1'));
+
+    // Switch back to All and verify count updates
+    const allFilterBtn = await popupCheck.$('.cve-filter-btn[data-filter="all"]');
+    await allFilterBtn.click();
+    await new Promise(r => setTimeout(r, 200));
+    const allRows2 = await popupCheck.$$('.cve-row');
+    assert('All filter restores 3 CVEs', allRows2.length === 3);
+    const copyBtn2 = await popupCheck.$('#copyCveIdsBtn');
+    const copyText2 = await copyBtn2.textContent();
+    assert('Copy button shows 3 for All filter', copyText2.includes('3'));
+
+    // Test Back button
+    const backBtn = await popupCheck.$('#cveBackBtn');
+    assert('Back button present', !!backBtn);
+    await backBtn.click();
+    await popupCheck.waitForSelector('#toggleButton', { timeout: 3000 });
+    assert('Back returns to main view', true);
+
     await popupCheck.close();
 
   } catch (err) {
