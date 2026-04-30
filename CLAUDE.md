@@ -147,6 +147,7 @@ v1-helper/
 │   ├── verify_dod_events.py      # DoD SIEM event verification
 │   ├── aws/                     # AWS lab infrastructure scripts
 │   ├── lab/                     # Lab cluster setup scripts
+│   ├── test/                    # Test suites (run-all.sh, test-T0XX-*.sh)
 │   └── automate/                 # V1 console automation sub-module
 │       ├── __init__.py           # Package exports
 │       ├── actions.py            # Action plan builders (dismiss, accept, overlay, triage)
