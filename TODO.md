@@ -1,8 +1,8 @@
 # v1-helper TODO
 
 ## Session Handoff
-Phase 1 complete. T035 (PDF export) done — html2pdf.js with CDN on-demand load, print fallback, 20-point test.
-Phase 2 blocked on V1 login password (T009). Working on T032 (cloud-init fix) next.
+T035 (PDF export) and T032 (cloud-init fix) done. 80/80 tests passing (48 ext + 20 pdf + 12 cloud-init).
+Phase 2 blocked on V1 login password (T009). Next available: T033/T034 (lab cluster setup) or T036-T038 (reports polish).
 
 ## Phase 1: Clean Architecture (DONE)
 - [x] T019: Remove MCP bridge code (1932-line background script -> 67 lines)
