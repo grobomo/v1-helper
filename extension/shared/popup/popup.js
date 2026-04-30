@@ -151,7 +151,8 @@ async function toggleEnabled() {
 // --- Settings ---
 
 async function saveSettings() {
-  const portChanged = state.port !== (await browserAPI.storage.local.get('mcpPort')).mcpPort;
+  const stored = await browserAPI.storage.local.get('mcpPort');
+  const portChanged = stored.mcpPort != null && state.port !== stored.mcpPort;
   await browserAPI.storage.local.set({
     mcpPort: state.port,
     debugMode: state.debugMode,
