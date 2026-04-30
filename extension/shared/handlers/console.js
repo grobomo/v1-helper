@@ -74,8 +74,8 @@ export class ConsoleHandler {
       await this.browserAdapter.executeScript(tabId, {
         func: function() {
           // Only inject once
-          if (!window.__blueprintConsoleInjected) {
-            window.__blueprintConsoleInjected = true;
+          if (!window.__v1hConsoleInjected) {
+            window.__v1hConsoleInjected = true;
 
             // Store original console methods
             const originalConsole = {
@@ -107,7 +107,7 @@ export class ConsoleHandler {
                 };
 
                 // Try to send via postMessage (extension will listen)
-                window.postMessage({ __blueprintConsole: message }, '*');
+                window.postMessage({ __v1hConsole: message }, '*');
               };
             });
           }

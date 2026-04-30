@@ -29,11 +29,11 @@ export class DialogHandler {
       await this.browserAdapter.executeScript(tabId, {
         func: function(dialogResponse) {
           // Set up dialog response in window object
-          window.__blueprintDialogResponse = dialogResponse;
+          window.__v1hDialogResponse = dialogResponse;
 
           // Initialize dialog event log if not exists
-          if (!window.__blueprintDialogEvents) {
-            window.__blueprintDialogEvents = [];
+          if (!window.__v1hDialogEvents) {
+            window.__v1hDialogEvents = [];
           }
 
           // Store originals only once
@@ -45,9 +45,9 @@ export class DialogHandler {
             // Override alert with auto-response
             window.alert = function(...args) {
               const message = args[0] || '';
-              if (window.__blueprintDialogResponse) {
+              if (window.__v1hDialogResponse) {
                 // Don't pollute page console
-                window.__blueprintDialogEvents.push({
+                window.__v1hDialogEvents.push({
                   type: 'alert',
                   message: message,
                   response: undefined,
@@ -62,10 +62,10 @@ export class DialogHandler {
             // Override confirm with auto-response
             window.confirm = function(...args) {
               const message = args[0] || '';
-              if (window.__blueprintDialogResponse) {
-                const response = window.__blueprintDialogResponse.accept;
+              if (window.__v1hDialogResponse) {
+                const response = window.__v1hDialogResponse.accept;
                 // Don't pollute page console
-                window.__blueprintDialogEvents.push({
+                window.__v1hDialogEvents.push({
                   type: 'confirm',
                   message: message,
                   response: response,
@@ -81,12 +81,12 @@ export class DialogHandler {
             window.prompt = function(...args) {
               const message = args[0] || '';
               const defaultValue = args[1] || '';
-              if (window.__blueprintDialogResponse) {
-                const response = window.__blueprintDialogResponse.accept
-                  ? window.__blueprintDialogResponse.promptText
+              if (window.__v1hDialogResponse) {
+                const response = window.__v1hDialogResponse.accept
+                  ? window.__v1hDialogResponse.promptText
                   : null;
                 // Don't pollute page console
-                window.__blueprintDialogEvents.push({
+                window.__v1hDialogEvents.push({
                   type: 'prompt',
                   message: message,
                   defaultValue: defaultValue,
@@ -123,7 +123,7 @@ export class DialogHandler {
   async getDialogEvents(tabId) {
     try {
       const results = await this.browserAdapter.executeScript(tabId, {
-        func: () => window.__blueprintDialogEvents || []
+        func: () => window.__v1hDialogEvents || []
       });
 
       return results && results[0] ? results[0] : [];
@@ -140,7 +140,7 @@ export class DialogHandler {
   async clearDialogEvents(tabId) {
     try {
       await this.browserAdapter.executeScript(tabId, {
-        func: () => { window.__blueprintDialogEvents = []; }
+        func: () => { window.__v1hDialogEvents = []; }
       });
 
       this.logger.log('[DialogHandler] Dialog events cleared for tab:', tabId);
