@@ -1,9 +1,9 @@
 # v1-helper TODO
 
 ## Session Handoff
-T015, T016, T007, T010 done this session. Extension complete (53-point test suite).
-Report generator now groups findings by cluster in Section 2 — tested with EP customer data.
-Next: remaining Priority 2 report improvements or Priority 3 automation.
+This session: T015, T016, T007, T010, auto-analyze. Extension complete (53-point test suite).
+Report: cluster grouping, auto-analyze new CVEs. Tested with EP customer data.
+Next: analysis cache per customer, or V1 console deep links.
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
@@ -14,7 +14,7 @@ Next: remaining Priority 2 report improvements or Priority 3 automation.
 
 ## Priority 2: Reports
 - [x] T007: Per-cluster report sections — images grouped under cluster headers with protection status, sorted by CVE count
-- [ ] Auto-run analysis for new CVEs not in analysis.json (currently manual)
+- [x] Auto-run analysis for new CVEs — incremental Claude analysis, merge into analysis.json
 - [ ] Analysis cache per customer (currently shared analysis.json)
 - [ ] Diff analysis between runs (what changed since last report)
 - [ ] Direct PDF export without print dialog (jsPDF or html2pdf.js)
