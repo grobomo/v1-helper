@@ -121,10 +121,10 @@ console.error('[Background] ✅ tabs.onUpdated listener registered at TOP LEVEL!
 // and avoids CSP issues by not using eval() when possible
 
 // Initialize logger
-const logger = new Logger('Blueprint MCP for Chrome');
+const logger = new Logger('V1 Helper for Chrome');
 await logger.init(chrome);
 const manifest = chrome.runtime.getManifest();
-logger.logAlways(`Blueprint MCP v${manifest.version}`);
+logger.logAlways(`V1 Helper v${manifest.version}`);
 
 // Read build timestamp (read once at startup)
 let buildTimestamp = null;
@@ -469,7 +469,7 @@ async function handleCDPCommand(cdpMethod, cdpParams) {
         const extensionInfo = await chrome.management.getSelf();
         if (!extensionInfo.hostPermissions.includes('file:///*') && !extensionInfo.hostPermissions.includes('<all_urls>')) {
           throw new Error(
-            'Cannot navigate to file:// URLs. Please enable "Allow access to file URLs" in chrome://extensions/ for Blueprint MCP extension.'
+            'Cannot navigate to file:// URLs. Please enable "Allow access to file URLs" in chrome://extensions/ for V1 Helper extension.'
           );
         }
       }
