@@ -157,11 +157,14 @@ v1-helper/
 │   ├── demo.md                   # Environment context
 │   ├── ep.json
 │   └── ep.md
+├── tests/
+│   └── extension-validate.js    # 48-point Chrome extension validation
 └── reports/                      # Generated reports + cached data (gitignored)
     ├── analysis.json             # Cached CVE analysis (shared across customers)
+    ├── history/                  # Auto-archived raw data snapshots (for trends)
     ├── demo-raw-data.json        # Cached V1 API responses
     ├── ep-raw-data.json
-    └── ep_Container_Security_2026-03-25.html
+    └── ep_Container_Security_2026-04-30.html
 ```
 
 ## V1 API Endpoints Used
