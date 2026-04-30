@@ -55,7 +55,13 @@ let state = {
 async function updateStatus() {
   const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
   const currentTab = tabs[0];
-  const response = await browserAPI.runtime.sendMessage({ type: 'getConnectionStatus' });
+  let response;
+  try {
+    response = await browserAPI.runtime.sendMessage({ type: 'getConnectionStatus' });
+  } catch {
+    // Service worker not ready yet — use defaults
+    response = {};
+  }
 
   const connectedTabId = response?.connectedTabId;
   state.anyConnected = response?.connected === true;
