@@ -1175,6 +1175,62 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
     need_action_count = sum(1 for ci in critical_items if ci["type"] == "CVE")
     unanalyzed_cves = set(f["cve"] for f in findings) - set(analysis_map.keys())
     unanalyzed_count = len(unanalyzed_cves)
+    runtime_action_count = sum(1 for ci in critical_items if ci["type"] == "Runtime")
+    not_relevant_count = sum(1 for f in findings if analysis_map.get(f["cve"], {}).get("relevant") == "no")
+
+    # Build executive summary
+    n_new = len(diff_data["added"]) if diff_data else 0
+    n_res = len(diff_data["resolved"]) if diff_data else 0
+    diff_stat = ""
+    if diff_data and (n_new or n_res):
+        delta = diff_data["new_total"] - diff_data["old_total"]
+        delta_str = f"+{delta}" if delta > 0 else str(delta)
+        diff_stat = f"""<div class="summary-stat">
+  <div class="summary-num" style="color:var(--heading)">{delta_str}</div>
+  <div class="summary-label">{n_new} new / {n_res} resolved</div>
+</div>"""
+
+    exec_summary = f"""<h2 style="scroll-margin-top:50px">Executive Summary</h2>
+<div class="section" data-section="exec-summary">
+  <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
+  <div class="section-body">
+<div class="summary-grid">
+  <div class="summary-stat">
+    <div class="summary-num">{len(findings)}</div>
+    <div class="summary-label">Total CVEs</div>
+  </div>
+  <div class="summary-stat">
+    <div class="summary-num" style="color:#721c24">{sev_totals.get('critical',0)}</div>
+    <div class="summary-label">Critical</div>
+  </div>
+  <div class="summary-stat">
+    <div class="summary-num" style="color:#856404">{sev_totals.get('high',0)}</div>
+    <div class="summary-label">High</div>
+  </div>
+  <div class="summary-stat">
+    <div class="summary-num" style="color:#155724">{need_action_count}</div>
+    <div class="summary-label">Need Action</div>
+  </div>
+  <div class="summary-stat">
+    <div class="summary-num">{len(sorted_clusters)}</div>
+    <div class="summary-label">Clusters</div>
+  </div>
+  <div class="summary-stat">
+    <div class="summary-num">{len(groups)}</div>
+    <div class="summary-label">Affected Images</div>
+  </div>
+  {diff_stat}
+</div>
+<table style="margin-top:12px">
+  <tr><th>Category</th><th>Count</th><th>Description</th></tr>
+  <tr><td>Relevant</td><td><strong>{relevant_count}</strong></td><td>CVEs that affect packages used at runtime in this environment</td></tr>
+  <tr><td>Not Relevant</td><td>{not_relevant_count}</td><td>CVEs in unused or build-time-only dependencies</td></tr>
+  <tr><td>Unanalyzed</td><td>{unanalyzed_count}</td><td>CVEs not yet analyzed — run without --skip-llm</td></tr>
+  <tr><td>Runtime Events</td><td>{len(eval_events or []) + len(sensor_events or [])}</td><td>{runtime_action_count} need action</td></tr>
+</table>
+  </div>
+</div>
+"""
 
     html = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
@@ -1243,6 +1299,10 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .diff-new {{ border-left-color: #e94560; background: rgba(233,69,96,0.08); }}
   .diff-resolved {{ border-left-color: #155724; background: rgba(21,87,36,0.08); }}
   .diff-changed {{ border-left-color: #856404; background: rgba(133,100,4,0.08); }}
+  .summary-grid {{ display: flex; flex-wrap: wrap; gap: 16px; padding: 12px 0; }}
+  .summary-stat {{ text-align: center; min-width: 90px; padding: 10px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }}
+  .summary-num {{ font-size: 1.8em; font-weight: 700; color: var(--heading); line-height: 1.2; }}
+  .summary-label {{ font-size: 0.78em; color: var(--meta); font-weight: 600; margin-top: 2px; }}
   .xdr-results {{ margin-top: 8px; }}
   .xdr-results .xdr-label {{ display: block; margin-bottom: 4px; }}
   .xdr-table {{ font-size: 0.82em; margin: 4px 0; }}
@@ -1338,6 +1398,8 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 
 <h1>V1 Container Security Report</h1>
 <p><strong>Generated:</strong> {now.strftime('%Y-%m-%d %H:%M')} | <strong>Source:</strong> Vision One API + Claude Analysis</p>
+
+{exec_summary}
 
 <h2 style="scroll-margin-top:50px">Environment Context</h2>
 <div class="section" data-section="env-ctx">

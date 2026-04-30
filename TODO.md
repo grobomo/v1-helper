@@ -32,7 +32,7 @@ Phase 2 blocked on V1 login password (T009). Next available: T033/T034 (lab clus
 
 ## Phase 5: Reports Polish (lowest priority)
 - [x] T035: PDF export — html2pdf.js with CDN on-demand load, print fallback (20-point test)
-- [ ] T036: Executive summary
+- [x] T036: Executive summary — stat grid + relevance table at top of report (10-point test)
 - [ ] T037: Historic trend analysis
 - [ ] T038: K8s labels in image grouping (blocked by V1 API)
 
