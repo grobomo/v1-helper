@@ -20,8 +20,19 @@ python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.js
 # Compare against previous run (diff section in report)
 python scripts/report_generator.py --customer ep --cached reports/ep-raw-data.json --prev reports/ep-prev-data.json --skip-llm
 
+# --- Chrome Extension ---
+# Launch Chromium with V1 Helper extension (bypasses enterprise Chrome policies)
+node scripts/launch-extension.js
+node scripts/launch-extension.js --url https://portal.trendmicro.com
+
 # --- Automation ---
-# Generate a plan to dismiss specific CVEs in V1 console
+# Bulk triage: preview what would be dismissed/accepted/flagged
+python scripts/executor.py --customer ep automate triage --dry-run
+
+# Bulk triage: generate action plans (saved to reports/)
+python scripts/executor.py --customer ep automate triage --save
+
+# Dismiss specific CVEs in V1 console
 python scripts/executor.py automate dismiss CVE-2024-1234 CVE-2024-5678
 
 # Auto-dismiss all non-relevant CVEs from analysis
@@ -133,9 +144,10 @@ v1-helper/
 │   ├── v1_overlay.py             # V1 DOM overlay injection
 │   ├── v1_actions.py             # (deprecated, redirects to automate/)
 │   ├── verify_dod_events.py      # DoD SIEM event verification
+│   ├── launch-extension.js       # Launch Chromium with V1 Helper extension
 │   └── automate/                 # V1 console automation sub-module
 │       ├── __init__.py           # Package exports
-│       ├── actions.py            # Action plan builders (dismiss, accept, overlay)
+│       ├── actions.py            # Action plan builders (dismiss, accept, overlay, triage)
 │       └── js.py                 # JavaScript payloads for V1 DOM interaction
 ├── customers/                    # Per-customer config + context (gitignored)
 │   ├── demo.json                 # API key name + region
@@ -198,6 +210,8 @@ Blueprint MCP                 -->  controls browser (evaluate JS, click, snapsho
 
 | Command | What it does |
 |---------|-------------|
+| `automate triage --dry-run` | Preview: categorize all CVEs, show dismiss/accept/flag counts |
+| `automate triage --save` | Generate dismiss + accept plans, flag critical for review |
 | `automate dismiss CVE-...` | Select CVEs, change status to dismissed |
 | `automate accept CVE-...` | Select CVEs, change status to accepted |
 | `automate auto-dismiss` | Dismiss all non-relevant CVEs from analysis.json |
