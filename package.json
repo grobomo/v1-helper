@@ -3,6 +3,6 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "test": "node tests/extension-validate.js"
+    "test": "bash scripts/test/run-all.sh"
   }
 }
