@@ -1,9 +1,8 @@
 # v1-helper TODO
 
 ## Session Handoff
-This session: T015, T016, T007, T010, auto-analyze, per-customer cache. Extension: 53-point test suite.
-Report: cluster grouping, auto-analyze new CVEs, per-customer analysis cache.
-Next: V1 console deep links per CVE, diff analysis between runs, or Kubernetes labels in grouping.
+Deep links done — region-aware V1 console links per CVE, fixed wrong #/app/sase, API reference URLs.
+Next: diff analysis between runs, Kubernetes labels in grouping, or PDF export.
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
@@ -20,7 +19,7 @@ Next: V1 console deep links per CVE, diff analysis between runs, or Kubernetes l
 - [ ] Direct PDF export without print dialog (jsPDF or html2pdf.js)
 - [ ] Kubernetes labels in image grouping
 - [ ] Historic trend analysis: compare current vs past reports
-- [ ] V1 console deep links per CVE (not just generic vuln management page)
+- [x] V1 console deep links per CVE — region-aware portal URLs, per-row V1 button, fixed wrong links, API ref URLs
 
 ## Priority 3: Automation Tooling
 - [ ] T009: Live test automation against V1 console — BLOCKED: need V1 login password stored in credential-manager
