@@ -163,6 +163,36 @@ def enrich(vulns, clusters, occurrences):
     return findings
 
 
+def compute_diff(old_findings, new_findings):
+    """Compare two sets of findings. Returns dict with new, resolved, and changed CVEs."""
+    old_cves = {}
+    for f in old_findings:
+        key = (f["cve"], f["package"], f["clusterName"])
+        old_cves[key] = f
+
+    new_cves = {}
+    for f in new_findings:
+        key = (f["cve"], f["package"], f["clusterName"])
+        new_cves[key] = f
+
+    old_keys = set(old_cves.keys())
+    new_keys = set(new_cves.keys())
+
+    added = [new_cves[k] for k in sorted(new_keys - old_keys)]
+    resolved = [old_cves[k] for k in sorted(old_keys - new_keys)]
+    changed = []
+    for k in old_keys & new_keys:
+        old, new = old_cves[k], new_cves[k]
+        if old["severity"] != new["severity"]:
+            changed.append({"cve": new["cve"], "package": new["package"],
+                            "cluster": new["clusterName"],
+                            "old_severity": old["severity"],
+                            "new_severity": new["severity"]})
+
+    return {"added": added, "resolved": resolved, "changed": changed,
+            "old_total": len(old_keys), "new_total": len(new_keys)}
+
+
 # ============================================================
 # Claude analysis
 # ============================================================
@@ -800,7 +830,7 @@ PORTAL_BASES = {
 }
 
 
-def write_html(findings, analyses, clusters, output_path, eval_events=None, sensor_events=None, xdr_results=None, customer_context=None, region="us-east-1"):
+def write_html(findings, analyses, clusters, output_path, eval_events=None, sensor_events=None, xdr_results=None, customer_context=None, region="us-east-1", diff_data=None):
     now = datetime.datetime.now()
     customer_context = customer_context or "No customer context provided. Analysis based on general container security best practices."
     portal_base = PORTAL_BASES.get(region, PORTAL_BASES["us-east-1"])
@@ -1110,6 +1140,36 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   <strong>No high-relevance, high-severity alerts found. Nice!</strong>
 </div>"""
 
+    # Build diff section if we have comparison data
+    diff_section = ""
+    if diff_data and (diff_data["added"] or diff_data["resolved"] or diff_data["changed"]):
+        sev_order_map = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        diff_items = []
+        for f in sorted(diff_data["added"], key=lambda x: sev_order_map.get(x["severity"], 9)):
+            sc = sev_colors.get(f["severity"], "#eee")
+            st = sev_text.get(f["severity"], "#333")
+            diff_items.append(f'<div class="diff-item diff-new"><span class="tag" style="background:{sc};color:{st}">{f["severity"].upper()}</span> <strong>NEW</strong> <a href="#cve-{f["cve"]}">{f["cve"]}</a> in {html_mod.escape(f["package"])} ({html_mod.escape(f["clusterName"])})</div>')
+        for f in sorted(diff_data["resolved"], key=lambda x: sev_order_map.get(x["severity"], 9)):
+            sc = sev_colors.get(f["severity"], "#eee")
+            st = sev_text.get(f["severity"], "#333")
+            diff_items.append(f'<div class="diff-item diff-resolved"><span class="tag" style="background:{sc};color:{st}">{f["severity"].upper()}</span> <strong>RESOLVED</strong> {f["cve"]} in {html_mod.escape(f["package"])} ({html_mod.escape(f["clusterName"])})</div>')
+        for c in diff_data["changed"]:
+            diff_items.append(f'<div class="diff-item diff-changed"><strong>CHANGED</strong> <a href="#cve-{c["cve"]}">{c["cve"]}</a> in {html_mod.escape(c["package"])} — {c["old_severity"].upper()} &rarr; {c["new_severity"].upper()}</div>')
+
+        n_new = len(diff_data["added"])
+        n_res = len(diff_data["resolved"])
+        n_chg = len(diff_data["changed"])
+        delta = diff_data["new_total"] - diff_data["old_total"]
+        delta_str = f"+{delta}" if delta > 0 else str(delta)
+        diff_section = f"""<h2 style="scroll-margin-top:50px">Changes Since Last Run</h2>
+<div class="section" data-section="diff">
+  <div class="section-bar" onclick="toggleSection(this)"><svg class="chev" viewBox="0 0 12 12"><polyline points="3,2 9,6 3,10"/></svg><span class="expand-label">Expand</span></div>
+  <div class="section-body">
+<p><strong>{n_new} new</strong> | <strong>{n_res} resolved</strong> | <strong>{n_chg} severity changed</strong> | Net: {delta_str} ({diff_data['old_total']} &rarr; {diff_data['new_total']})</p>
+<div class="diff-list">{''.join(diff_items)}</div>
+  </div>
+</div>"""
+
     # Count relevant CVEs and CVEs needing action
     relevant_count = sum(1 for f in findings if analysis_map.get(f["cve"], {}).get("relevant") in ("yes", "low"))
     need_action_count = sum(1 for ci in critical_items if ci["type"] == "CVE")
@@ -1178,6 +1238,11 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
   .copy-btn:hover {{ opacity: 0.85; }}
   .v1-link {{ display: inline-block; background: #0066cc; color: #fff; text-decoration: none; border-radius: 4px; padding: 3px 8px; font-size: 0.8em; font-weight: 700; white-space: nowrap; transition: background 0.15s; margin-right: 4px; }}
   .v1-link:hover {{ background: #0052a3; }}
+  .diff-list {{ display: flex; flex-direction: column; gap: 4px; }}
+  .diff-item {{ padding: 6px 10px; border-radius: 4px; font-size: 0.9em; border-left: 4px solid var(--border); }}
+  .diff-new {{ border-left-color: #e94560; background: rgba(233,69,96,0.08); }}
+  .diff-resolved {{ border-left-color: #155724; background: rgba(21,87,36,0.08); }}
+  .diff-changed {{ border-left-color: #856404; background: rgba(133,100,4,0.08); }}
   .xdr-results {{ margin-top: 8px; }}
   .xdr-results .xdr-label {{ display: block; margin-bottom: 4px; }}
   .xdr-table {{ font-size: 0.82em; margin: 4px 0; }}
@@ -1294,6 +1359,8 @@ def write_html(findings, analyses, clusters, output_path, eval_events=None, sens
 </div>
 
 {critical_section}
+
+{diff_section}
 
 <h2>1. Cluster Overview</h2>
 <div class="section" data-section="cluster">
@@ -1480,6 +1547,7 @@ def main():
     parser.add_argument("--output", help="Output HTML path")
     parser.add_argument("--customer", default="demo", help="Customer name (loads customers/<name>.json + .md)")
     parser.add_argument("--cached", help="Use cached V1 data JSON instead of live API")
+    parser.add_argument("--prev", help="Previous raw-data JSON to compare against (for diff section)")
     parser.add_argument("--analysis", help="Pre-computed analysis JSON file")
     args = parser.parse_args()
 
@@ -1491,6 +1559,7 @@ def main():
 
     eval_events = []
     sensor_events = []
+    prev_data = None
 
     if args.cached and os.path.exists(args.cached):
         print(f"Loading cached V1 data from {args.cached}...")
@@ -1502,6 +1571,15 @@ def main():
         sensor_events = cached.get("sensor_events", [])
     else:
         print("Pulling V1 data...")
+        # Load previous data for diff comparison before overwriting
+        cache_path = REPORTS_DIR / f"{args.customer}-raw-data.json"
+        prev_data = None
+        if cache_path.exists():
+            try:
+                prev_data = json.load(open(str(cache_path)))
+                print(f"  Loaded previous data for diff comparison")
+            except Exception:
+                pass
         api = V1(region, api_key_name)
         # Kubernetes
         clusters = api.clusters()
@@ -1520,7 +1598,6 @@ def main():
         occurrences.extend(ecs_occurrences)
         sensor_events.extend(ecs_sensor)
         # Cache per customer
-        cache_path = REPORTS_DIR / f"{args.customer}-raw-data.json"
         json.dump({"clusters": clusters, "vulns": vulns, "occurrences": occurrences,
                    "eval_events": eval_events, "sensor_events": sensor_events},
                   open(str(cache_path), "w"))
@@ -1530,6 +1607,19 @@ def main():
     print("Enriching with K8s context...")
     findings = enrich(vulns, clusters, occurrences)
     print(f"  {len(findings)} findings enriched")
+
+    # Compute diff against previous run
+    diff_data = None
+    prev_data_ref = prev_data if 'prev_data' in dir() else None
+    if args.prev:
+        try:
+            prev_data_ref = json.load(open(args.prev))
+        except Exception as e:
+            print(f"  Warning: Could not load --prev file: {e}")
+    if prev_data_ref:
+        old_findings = enrich(prev_data_ref["vulns"], prev_data_ref["clusters"], prev_data_ref["occurrences"])
+        diff_data = compute_diff(old_findings, findings)
+        print(f"  Diff: {len(diff_data['added'])} new, {len(diff_data['resolved'])} resolved, {len(diff_data['changed'])} changed")
 
     analyses = None
     # Per-customer analysis cache, with fallback to shared analysis.json
@@ -1629,7 +1719,7 @@ def main():
     if analyses:
         print("Generating relevance reasoning from customer context...")
         generate_relevance(analyses, customer_ctx)
-    write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx, region)
+    write_html(findings, analyses, clusters, out, eval_events, sensor_events, xdr_results, customer_ctx, region, diff_data)
     print(f"\nReport: {out}")
 
     # Auto-open
