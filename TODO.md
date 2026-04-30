@@ -1,8 +1,8 @@
 # v1-helper TODO
 
 ## Session Handoff
-Deep links done — region-aware V1 console links per CVE, fixed wrong #/app/sase, API reference URLs.
-Next: diff analysis between runs, Kubernetes labels in grouping, or PDF export.
+Diff analysis done — --prev flag compares findings, auto-loads previous cache on fresh runs.
+Next: Kubernetes labels in grouping, PDF export, or historic trend analysis.
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
@@ -15,7 +15,7 @@ Next: diff analysis between runs, Kubernetes labels in grouping, or PDF export.
 - [x] T007: Per-cluster report sections — images grouped under cluster headers with protection status, sorted by CVE count
 - [x] Auto-run analysis for new CVEs — incremental Claude analysis, merge into analysis.json
 - [x] Analysis cache per customer — `reports/<customer>-analysis.json`, auto-migrates from shared file
-- [ ] Diff analysis between runs (what changed since last report)
+- [x] Diff analysis between runs — --prev flag, auto-loads previous cache, new/resolved/changed CVE section
 - [ ] Direct PDF export without print dialog (jsPDF or html2pdf.js)
 - [ ] Kubernetes labels in image grouping
 - [ ] Historic trend analysis: compare current vs past reports
