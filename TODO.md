@@ -68,4 +68,4 @@
 
 ### Working API keys
 - `v1-api/V1_API_KEY` — full permissions, Alerts+Clusters+OAT verified 200
-- `v1-api/EP_API_KEY` — EP customer key, Alerts verified 200
+- `v1-api/EP_API_KEY` — customer key, Alerts verified 200

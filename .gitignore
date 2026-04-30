@@ -18,6 +18,9 @@ node_modules/
 Thumbs.db
 __pycache__/
 
+# Archive (local only, may contain customer data)
+archive/
+
 # Session artifacts
 SESSION_STATE.md
 .workflow-state.json

@@ -1,0 +1,4 @@
+# Customer names to scan for in public repos.
+# One name per line (case-insensitive grep pattern).
+# Update this file whenever a new customer is encountered.
+Panavision
