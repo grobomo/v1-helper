@@ -1,16 +1,16 @@
 # v1-helper TODO
 
 ## Session Handoff
-T015 done. CVE list view in popup with filter buttons (All/Relevant/Low/None) and copy IDs to clipboard.
-40-point Playwright test suite passes. Run: `npm test` or `node tests/extension-load.spec.js`.
-All stale worktrees cleaned. Next: T016 (extension settings — V1 API key, region, customer context).
+T015 + T016 done. Full settings page with V1 API key, region, test connection, customer context.
+53-point Playwright test suite passes. Also fixed popup race condition (service worker timing).
+Priority 1 extension tasks all complete. Next: Priority 2 reports or Priority 3 automation.
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
 - [x] T014: CVE overlay injection — color-coded badges (relevant/low/not-relevant), detail panel, auto-inject on V1 SPA nav, toggle in popup
 - [x] T015: CVE list view in popup — filter by relevance (All/Relevant/Low/None), copy CVE IDs to clipboard, 40-point test suite
-- [ ] T016: Extension settings page (V1 API key, region, customer context)
-- [x] T017: Extension verified — 40-point Playwright test (service worker, popup, settings, content script, icons, overlay, CVE list view)
+- [x] T016: V1 settings — API key (masked + toggle), region selector (5 regions), test connection, customer context, 53-point test suite
+- [x] T017: Extension verified — 53-point Playwright test (service worker, popup, V1 settings, content script, icons, overlay, CVE list)
 
 ## Priority 2: Reports
 - [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
