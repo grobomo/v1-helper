@@ -26,7 +26,7 @@ Phase 2 blocked on V1 login password (T009). Working on T032 (cloud-init fix) ne
 - [ ] T012: V1 page data scraper via Blueprint
 
 ## Phase 4: Lab Infrastructure
-- [ ] T032: Fix cloud-init user data encoding (base64 on Windows)
+- [x] T032: Fix cloud-init user data encoding — file:// instead of base64 pipe (12-point test)
 - [ ] T033: Install V1 Container Security on lab cluster
 - [ ] T034: Deploy test workloads, generate CVEs and sensor events
 
