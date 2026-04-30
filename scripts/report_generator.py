@@ -1697,10 +1697,18 @@ def main():
         occurrences.extend(ecs_occurrences)
         sensor_events.extend(ecs_sensor)
         # Cache per customer
-        json.dump({"clusters": clusters, "vulns": vulns, "occurrences": occurrences,
-                   "eval_events": eval_events, "sensor_events": sensor_events},
-                  open(str(cache_path), "w"))
+        raw_payload = {"clusters": clusters, "vulns": vulns, "occurrences": occurrences,
+                       "eval_events": eval_events, "sensor_events": sensor_events}
+        json.dump(raw_payload, open(str(cache_path), "w"))
         print(f"  Cached to {cache_path}")
+        # Auto-archive timestamped snapshot for trend analysis
+        archive_dir = REPORTS_DIR / "history"
+        archive_dir.mkdir(exist_ok=True)
+        ts = datetime.datetime.now().strftime("%Y-%m-%d")
+        archive_path = archive_dir / f"{args.customer}-{ts}.json"
+        if not archive_path.exists():
+            json.dump(raw_payload, open(str(archive_path), "w"))
+            print(f"  Archived to {archive_path}")
     print(f"  {len(clusters)} clusters, {len(vulns)} vulns, {len(occurrences)} image occurrences")
 
     print("Enriching with K8s context...")
