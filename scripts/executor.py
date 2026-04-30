@@ -73,10 +73,60 @@ def cmd_automate(args):
     from automate.actions import (
         plan_dismiss_cves, plan_change_cve_status,
         plan_inject_overlays, plan_read_page, plan_from_report,
+        plan_triage,
     )
 
     sub = args.auto_command
-    if sub == "dismiss":
+    if sub == "triage":
+        customer = getattr(args, 'customer', None)
+        dry_run = getattr(args, 'dry_run', False)
+        result = plan_triage(customer=customer, dry_run=dry_run)
+
+        if result.get("error"):
+            print(f"Error: {result['error']}", file=sys.stderr)
+            return
+
+        s = result["summary"]
+        print(f"\n=== Bulk CVE Triage {'(DRY RUN)' if dry_run else ''} ===")
+        print(f"Analysis: {result['analysis_file']}")
+        print(f"Total CVEs: {s['total']}")
+        print(f"  Dismiss (not relevant): {s['dismiss']}")
+        print(f"  Accept (low risk):      {s['accept']}")
+        print(f"  Critical (needs review):{s['critical']}")
+        print(f"  Other relevant:         {s['review']}")
+        if s['unanalyzed'] > 0:
+            print(f"  Unanalyzed:             {s['unanalyzed']}")
+
+        if result["critical"]:
+            print(f"\n--- ACTION REQUIRED (assigned owner) ---")
+            for item in result["critical"]:
+                print(f"  [{item['owner']}] {item['cve']}: {item['action'][:80]}")
+
+        if result["review"]:
+            print(f"\n--- Relevant (unassigned) ---")
+            for item in result["review"]:
+                print(f"  {item['cve']}: {item['action'][:80]}")
+
+        if dry_run:
+            print(f"\nDry run — no plans generated. Remove --dry-run to generate action plans.")
+            return
+
+        if result["plans"]:
+            for i, plan in enumerate(result["plans"]):
+                meta = plan.get("metadata", {})
+                steps = len(plan.get("steps", []))
+                print(f"\n--- Plan {i+1}: {meta.get('action', '?')} | {steps} steps ---")
+                if args.save:
+                    out = PROJECT_ROOT / "reports" / f"plan-triage-{i+1}.json"
+                    out.write_text(json.dumps(plan, indent=2))
+                    print(f"Saved: {out}")
+                else:
+                    print(json.dumps(plan, indent=2))
+        else:
+            print("\nNo actions needed — all CVEs already triaged or relevant.")
+        return
+
+    elif sub == "dismiss":
         if not args.cve_ids:
             print("Usage: executor.py automate dismiss CVE-2024-1234 [CVE-2024-5678 ...]")
             return
@@ -202,7 +252,7 @@ Examples:
     p_auto = sub.add_parser("automate", help="V1 console automation")
     p_auto.add_argument("auto_command", choices=[
         "dismiss", "accept", "status", "auto-dismiss", "auto-accept",
-        "overlay", "read", "plan"
+        "overlay", "read", "plan", "triage"
     ])
     p_auto.add_argument("cve_ids", nargs="*", default=[])
     p_auto.add_argument("--status", dest="status_value", default="dismissed")
@@ -210,6 +260,7 @@ Examples:
     p_auto.add_argument("--analysis-file", default=None)
     p_auto.add_argument("--page-key", default="vuln_mgmt")
     p_auto.add_argument("--plan-file", default=None)
+    p_auto.add_argument("--dry-run", action="store_true", help="Preview triage without generating plans")
 
     # Legacy commands
     sub.add_parser("analyze", help="(legacy) Full analysis pipeline")
