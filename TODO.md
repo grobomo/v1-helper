@@ -1,16 +1,16 @@
 # v1-helper TODO
 
 ## Session Handoff
-T013 + T017 done. Extension loads, popup renders, service worker runs, no errors.
-Playwright test at tests/extension-load.spec.js — run with `npm test`.
-Next: T014 (CVE overlay injection into V1 console DOM).
+T013, T014, T017 done. CVE overlay injection working — auto-injects on V1 vuln pages.
+24-point Playwright test passes. Run with `npm test`.
+Next: T015 (popup quick actions) or T016 (settings page).
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
-- [ ] T014: V1 console overlay — inject CVE analysis badges into vulnerability page
+- [x] T014: CVE overlay injection — color-coded badges (relevant/low/not-relevant), detail panel, auto-inject on V1 SPA nav, toggle in popup
 - [ ] T015: Popup with quick actions (dismiss non-relevant, accept low-risk, view analysis)
 - [ ] T016: Extension settings page (V1 API key, region, customer context)
-- [x] T017: Extension verified — Playwright test loads extension, checks service worker, popup, settings, content script, icons (20/20) — static validation done, needs manual Chrome load test
+- [x] T017: Extension verified — 24-point Playwright test (service worker, popup, settings, content script, icons, overlay storage, toggle)
 
 ## Priority 2: Reports
 - [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
