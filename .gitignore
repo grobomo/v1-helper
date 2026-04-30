@@ -25,3 +25,5 @@ archive/
 SESSION_STATE.md
 .workflow-state.json
 .mcp.json
+.playwright-mcp/
+.playwright-mcp/
