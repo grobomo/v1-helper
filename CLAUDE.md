@@ -109,6 +109,8 @@ python scripts/report_generator.py --customer acme --cached reports/acme-raw-dat
 
 ## Report Features
 
+- **Executive Summary** — stat grid (CVEs, severity, clusters, images, diff delta) + relevance table
+- **PDF Export** — html2pdf.js loaded on-demand from CDN, falls back to print dialog if offline
 - **Critical Findings** — clickable jump links to high-severity, high-relevance items
 - **Changes Since Last Run** — diff section showing new, resolved, and severity-changed CVEs
 - **CVE Analysis** — per-CVE reasoning with relevance section tied to customer context
