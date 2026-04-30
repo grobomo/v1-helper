@@ -1,6 +1,36 @@
 # v1-helper TODO
 
-## v1.0 DONE
+## Priority 1: Chrome Extension
+- [ ] T013: MVP Chrome extension — scaffold manifest v3, popup, content script
+- [ ] T014: V1 console overlay — inject CVE analysis badges into vulnerability page
+- [ ] T015: Popup with quick actions (dismiss non-relevant, accept low-risk, view analysis)
+- [ ] T016: Extension settings page (V1 API key, region, customer context)
+- [ ] T017: Package and load as unpacked extension for testing
+
+## Priority 2: Reports
+- [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
+- [ ] Auto-run analysis for new CVEs not in analysis.json (currently manual)
+- [ ] Analysis cache per customer (currently shared analysis.json)
+- [ ] Diff analysis between runs (what changed since last report)
+- [ ] Direct PDF export without print dialog (jsPDF or html2pdf.js)
+- [ ] Kubernetes labels in image grouping
+- [ ] Historic trend analysis: compare current vs past reports
+- [ ] V1 console deep links per CVE (not just generic vuln management page)
+
+## Priority 3: Automation Tooling
+- [ ] T009: Live test automation against V1 console — BLOCKED: need V1 login password stored in credential-manager
+- [ ] T010: V1 SPA navigation handling (re-inject overlays on page change)
+- [ ] T011: Bulk CVE triage workflow (auto-dismiss non-relevant, accept low-risk, flag critical)
+- [ ] T012: V1 page data scraper — extract data not available via API (policy details, etc)
+
+## Priority 4: Lab Infrastructure
+- [ ] Spin up dedicated EC2 spot instance (Debian) with microk8s
+- [ ] Install V1 Container Security helm chart on new cluster
+- [ ] Register cluster in V1 console
+- [ ] Script to auto-provision lab: EC2 + microk8s + helm + V1 registration
+- [ ] Continuous test event runner (varied attack simulations for XDR telemetry)
+
+## Completed
 - [x] Report generator with Claude-powered CVE analysis
 - [x] V1 API integration (clusters, vulns, image occurrences, eval/sensor events)
 - [x] Per-CVE environment-aware analysis (kernel vs userspace, EKS/ECS context)
@@ -24,49 +54,18 @@
 - [x] Runtime events sorted by severity
 - [x] V1 API retry logic for transient errors (504, 500, 429)
 - [x] Fault-tolerant ECS API calls (V1 pagination bugs)
-
-## Current
-- [x] T002: V1 API key with full permissions stored (2026-04-24)
-- [x] T003: OAT HTML report generator (scripts/gen_oat_report.py, 2026-04-24)
-- [x] T004: Fix v1-api executor.py credential path (delegated to v1-api skill TODO)
-- [x] T005: Fix Anthropic API key newline (key itself expired — analysis done in-session by Claude, cached to analysis.json)
-- [x] Archived expired v1-lite/V1_API_KEY
-- [x] Added no-Playwright rule to CLAUDE.md
-- [x] DoD SIEM event verification for Panavision (TODO-dod-siem.md, scripts/verify_dod_events.py)
-- [x] T006: Auto-detect new CVEs not in analysis.json and prompt for analysis (2026-04-24)
-- [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
+- [x] T002: V1 API key with full permissions stored
+- [x] T003: OAT HTML report generator
+- [x] T004: Fix v1-api executor.py credential path
+- [x] T005: Fix Anthropic API key newline
+- [x] T006: Auto-detect new CVEs not in analysis.json
+- [x] T008: Automate sub-module with plan-based architecture
+- [x] T008a: JS payloads for V1 DOM interaction
+- [x] T008b: Action plan builders — dismiss, accept, overlay, read
+- [x] T008c: Unified CLI with automate sub-commands
+- [x] DoD SIEM event verification
+- [x] Terminated orphaned v1-helper-lab EC2 instance
 
 ### Working API keys
 - `v1-api/V1_API_KEY` — full permissions, Alerts+Clusters+OAT verified 200
 - `v1-api/EP_API_KEY` — EP customer key, Alerts verified 200
-
-## v1.1: Analysis Automation
-- [x] Anthropic API key: expired, not needed — analysis is done in-session by Claude and cached to analysis.json
-- [ ] Auto-run analysis for new CVEs not in analysis.json (currently manual)
-- [ ] Analysis cache per customer (currently shared analysis.json)
-- [ ] Diff analysis between runs (what changed since last report)
-
-## v1.1: Lab Infrastructure
-- [x] Terminated orphaned v1-helper-lab EC2 instance (was costing money)
-- [ ] Spin up dedicated EC2 spot instance (Debian) with microk8s
-- [ ] Install V1 Container Security helm chart on new cluster
-- [ ] Register cluster in V1 console
-- [ ] Script to auto-provision lab: EC2 + microk8s + helm + V1 registration
-- [ ] Continuous test event runner (varied attack simulations for XDR telemetry)
-
-## v1.2: Report Enhancements
-- [ ] Direct PDF export without print dialog (jsPDF or html2pdf.js)
-- [ ] Kubernetes labels in image grouping
-- [ ] Historic trend analysis: compare current vs past reports
-- [ ] Per-cluster sections in report (currently all clusters mixed together)
-- [ ] V1 console deep links per CVE (not just generic vuln management page)
-
-## v1.3: V1 Console Automation (scripts/automate/)
-- [x] T008: Automate sub-module with plan-based architecture (2026-04-30)
-- [x] T008a: JS payloads for V1 DOM interaction (automate/js.py)
-- [x] T008b: Action plan builders — dismiss, accept, overlay, read (automate/actions.py)
-- [x] T008c: Unified CLI with automate sub-commands (executor.py)
-- [ ] T009: Live test automation against V1 console (requires Blueprint MCP + V1 tab)
-- [ ] T010: V1 SPA navigation handling (re-inject overlays on page change)
-- [ ] T011: Bulk CVE triage workflow (auto-dismiss non-relevant, accept low-risk, flag critical)
-- [ ] T012: V1 page data scraper — extract data not available via API (policy details, etc)
