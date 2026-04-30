@@ -38,6 +38,7 @@ let state = {
   analysisRelevant: 0,
   analysisLow: 0,
   analysisNo: 0,
+  overlayEnabled: true,
 };
 
 // --- Status ---
@@ -61,12 +62,13 @@ async function updateStatus() {
 
 async function loadState() {
   const storage = await browserAPI.storage.local.get([
-    'extensionEnabled', 'mcpPort', 'debugMode'
+    'extensionEnabled', 'mcpPort', 'debugMode', 'v1h_overlay_enabled'
   ]);
 
   state.enabled = storage.extensionEnabled !== false;
   state.port = storage.mcpPort || '5555';
   state.debugMode = storage.debugMode || false;
+  state.overlayEnabled = storage.v1h_overlay_enabled !== false;
 
   const manifest = browserAPI.runtime.getManifest();
   state.version = manifest.version;
@@ -246,7 +248,16 @@ function renderMain() {
           ` : `
             <p style="font-size:12px;color:#666">No analysis loaded. Import analysis.json to see CVE overlays in V1 console.</p>
           `}
-          <button class="v1-import-btn" id="importAnalysisBtn">Import analysis.json</button>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="v1-import-btn" id="importAnalysisBtn" style="flex:1">Import analysis.json</button>
+            ${state.analysisCount > 0 ? `
+              <button class="v1-import-btn" id="injectOverlayBtn"
+                style="flex:1;background:${state.overlayEnabled ? '#16a34a' : '#9ca3af'}"
+                title="${state.overlayEnabled ? 'Overlays auto-inject on V1 pages' : 'Overlays disabled'}">
+                ${state.overlayEnabled ? 'Overlays On' : 'Overlays Off'}
+              </button>
+            ` : ''}
+          </div>
           <input type="file" id="analysisFileInput" class="v1-file-input" accept=".json" />
         </div>
 
@@ -281,6 +292,18 @@ function attachEventListeners() {
       const file = e.target.files[0];
       if (file) importAnalysis(file);
       e.target.value = '';
+    });
+    document.getElementById('injectOverlayBtn')?.addEventListener('click', async () => {
+      state.overlayEnabled = !state.overlayEnabled;
+      await browserAPI.storage.local.set({ v1h_overlay_enabled: state.overlayEnabled });
+      // Notify active tab
+      const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+      if (tabs[0]) {
+        browserAPI.tabs.sendMessage(tabs[0].id, {
+          type: state.overlayEnabled ? 'v1h_injectOverlays' : 'v1h_removeOverlays'
+        }).catch(() => {});
+      }
+      render();
     });
   }
 }
