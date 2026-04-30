@@ -1,20 +1,16 @@
 # v1-helper TODO
 
 ## Session Handoff
-T013, T014, T017 done this session. Extension fully working — 24/24 Playwright tests pass.
-CVE overlay injection: auto-injects color-coded badges on V1 vuln pages, detail panel on click.
-Popup has import, stats, overlay toggle. Secret scanner fixed. All pushed to grobomo/v1-helper.
-Stale worktrees: chrome-extension, chrome-ext-fixes, scanner-fix, todo-update, todo-t014, cve-overlay (all merged).
-Next: T015 (popup quick actions — view/filter/copy CVE lists by relevance).
-T015 design: add CVE list view to popup with filter buttons (All/Relevant/Low/None), copy IDs to clipboard.
-Not full DOM automation — that's T011 (bulk triage via automate module).
+T015 done. CVE list view in popup with filter buttons (All/Relevant/Low/None) and copy IDs to clipboard.
+40-point Playwright test suite passes. Run: `npm test` or `node tests/extension-load.spec.js`.
+All stale worktrees cleaned. Next: T016 (extension settings — V1 API key, region, customer context).
 
 ## Priority 1: Chrome Extension
 - [x] T013: MVP Chrome extension — ported from Blueprint Extra MCP, Trend-branded, MCP automation + CVE overlay
 - [x] T014: CVE overlay injection — color-coded badges (relevant/low/not-relevant), detail panel, auto-inject on V1 SPA nav, toggle in popup
-- [ ] T015: Popup with quick actions (dismiss non-relevant, accept low-risk, view analysis)
+- [x] T015: CVE list view in popup — filter by relevance (All/Relevant/Low/None), copy CVE IDs to clipboard, 40-point test suite
 - [ ] T016: Extension settings page (V1 API key, region, customer context)
-- [x] T017: Extension verified — 24-point Playwright test (service worker, popup, settings, content script, icons, overlay storage, toggle)
+- [x] T017: Extension verified — 40-point Playwright test (service worker, popup, settings, content script, icons, overlay, CVE list view)
 
 ## Priority 2: Reports
 - [ ] T007: Per-cluster report sections (group findings by cluster instead of mixing)
