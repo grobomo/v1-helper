@@ -9,7 +9,7 @@ CUSTOMER_NAMES="$SCRIPT_DIR/../customer-names.txt"
 
 # Standard file types to scan
 INCLUDES='--include=*.py --include=*.sh --include=*.ps1 --include=*.tf --include=*.txt --include=*.json --include=*.yml --include=*.yaml --include=*.md --include=*.js --include=*.ts --include=*.html'
-EXCLUDES='--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=archive --exclude=secret-scan.sh'
+EXCLUDES='--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=archive --exclude-dir=worktrees --exclude-dir=.claude --exclude=secret-scan.sh'
 
 echo "=== Secret & PII Scan ==="
 
