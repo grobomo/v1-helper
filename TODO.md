@@ -1,8 +1,10 @@
 # v1-helper TODO
 
 ## Session Handoff
-T035 (PDF export) and T032 (cloud-init fix) done. 80/80 tests passing (48 ext + 20 pdf + 12 cloud-init).
-Phase 2 blocked on V1 login password (T009). Next available: T033/T034 (lab cluster setup) or T036-T038 (reports polish).
+T035 (PDF export), T032 (cloud-init fix), T036 (exec summary) done. 94/94 tests via `npm test`.
+Unified test runner, auto-archiving of raw data for future trends.
+Phase 2 blocked on V1 login password (T009). T037 needs accumulated snapshots (auto-archive now in place).
+Remaining unblocked: T033/T034 (lab cluster), T037 (needs data), T038 (blocked by V1 API).
 
 ## Phase 1: Clean Architecture (DONE)
 - [x] T019: Remove MCP bridge code (1932-line background script -> 67 lines)
@@ -33,7 +35,7 @@ Phase 2 blocked on V1 login password (T009). Next available: T033/T034 (lab clus
 ## Phase 5: Reports Polish (lowest priority)
 - [x] T035: PDF export — html2pdf.js with CDN on-demand load, print fallback (20-point test)
 - [x] T036: Executive summary — stat grid + relevance table at top of report (10-point test)
-- [ ] T037: Historic trend analysis
+- [ ] T037: Historic trend analysis (auto-archive in place, needs accumulated snapshots)
 - [ ] T038: K8s labels in image grouping (blocked by V1 API)
 
 ## Completed
