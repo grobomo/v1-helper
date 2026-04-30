@@ -130,7 +130,10 @@ echo "=== Lab provisioning complete ==="
 CLOUD_INIT
 )
 
-USERDATA_B64=$(echo "$USERDATA" | base64 -w 0)
+# Write user data to temp file — avoids base64 encoding issues on Windows/Git Bash
+TMPFILE=$(mktemp)
+trap 'rm -f "$TMPFILE"' EXIT
+printf '%s\n' "$USERDATA" > "$TMPFILE"
 
 # --- Launch Spot Instance ---
 echo ""
@@ -145,14 +148,14 @@ if $DRY_RUN; then
   exit 0
 fi
 
-# Request spot instance
+# Request spot instance (file:// lets AWS CLI handle base64 encoding)
 INSTANCE_ID=$(aws ec2 run-instances \
   --image-id "$AMI_ID" \
   --instance-type "$INSTANCE_TYPE" \
   --key-name "$KEY_NAME" \
   --security-group-ids "$SG_ID" \
   --instance-market-options '{"MarketType":"spot","SpotOptions":{"MaxPrice":"'"$SPOT_PRICE"'","SpotInstanceType":"one-time"}}' \
-  --user-data "$USERDATA_B64" \
+  --user-data "file://$TMPFILE" \
   --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG_NAME},{Key=project,Value=v1-helper}]" \
   --block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":30,"VolumeType":"gp3"}}]' \
   --region "$REGION" \
