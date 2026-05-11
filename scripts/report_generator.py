@@ -292,14 +292,14 @@ def load_customer_config(customer="demo"):
     Auto-creates a default config on first run."""
     p = CUSTOMERS_DIR / f"{customer}.json"
     if p.exists():
-        return json.load(open(p))
+        return json.loads(p.read_text())
     # Default config
     config = {
         "api_key_name": f"v1-api/{customer.upper()}_API_KEY",
         "region": "us-east-1",
     }
     CUSTOMERS_DIR.mkdir(parents=True, exist_ok=True)
-    json.dump(config, open(str(p), "w"), indent=2)
+    p.write_text(json.dumps(config, indent=2))
     print(f"  Created {p} — edit api_key_name and region as needed")
     return config
 
@@ -1662,7 +1662,7 @@ def main():
 
     if args.cached and os.path.exists(args.cached):
         print(f"Loading cached V1 data from {args.cached}...")
-        cached = json.load(open(args.cached))
+        cached = json.loads(Path(args.cached).read_text())
         clusters = cached["clusters"]
         vulns = cached["vulns"]
         occurrences = cached["occurrences"]
@@ -1675,7 +1675,7 @@ def main():
         prev_data = None
         if cache_path.exists():
             try:
-                prev_data = json.load(open(str(cache_path)))
+                prev_data = json.loads(cache_path.read_text())
                 print(f"  Loaded previous data for diff comparison")
             except Exception:
                 pass
@@ -1699,7 +1699,7 @@ def main():
         # Cache per customer
         raw_payload = {"clusters": clusters, "vulns": vulns, "occurrences": occurrences,
                        "eval_events": eval_events, "sensor_events": sensor_events}
-        json.dump(raw_payload, open(str(cache_path), "w"))
+        cache_path.write_text(json.dumps(raw_payload))
         print(f"  Cached to {cache_path}")
         # Auto-archive timestamped snapshot for trend analysis
         archive_dir = REPORTS_DIR / "history"
@@ -1707,7 +1707,7 @@ def main():
         ts = datetime.datetime.now().strftime("%Y-%m-%d")
         archive_path = archive_dir / f"{args.customer}-{ts}.json"
         if not archive_path.exists():
-            json.dump(raw_payload, open(str(archive_path), "w"))
+            archive_path.write_text(json.dumps(raw_payload))
             print(f"  Archived to {archive_path}")
     print(f"  {len(clusters)} clusters, {len(vulns)} vulns, {len(occurrences)} image occurrences")
 
@@ -1720,7 +1720,7 @@ def main():
     prev_data_ref = prev_data if 'prev_data' in dir() else None
     if args.prev:
         try:
-            prev_data_ref = json.load(open(args.prev))
+            prev_data_ref = json.loads(Path(args.prev).read_text())
         except Exception as e:
             print(f"  Warning: Could not load --prev file: {e}")
     if prev_data_ref:
@@ -1747,7 +1747,7 @@ def main():
             analysis_file = str(per_customer)
     if os.path.exists(analysis_file):
         print(f"Loading analysis from {analysis_file}...")
-        raw = json.load(open(analysis_file))
+        raw = json.loads(Path(analysis_file).read_text())
         # Convert list format to dict keyed by CVE
         if isinstance(raw, list):
             analyses = {}
@@ -1781,7 +1781,7 @@ def main():
                 new_analyses = run_analysis(new_findings, customer_ctx, args.batch_size)
                 if new_analyses:
                     analyses.update(new_analyses)
-                    json.dump(analyses, open(analysis_file, "w"), indent=2)
+                    Path(analysis_file).write_text(json.dumps(analyses, indent=2))
                     print(f"  Merged {len(new_analyses)} new analyses into {analysis_file} (total: {len(analyses)})")
 
     elif not args.skip_llm:
@@ -1789,7 +1789,7 @@ def main():
         customer_ctx = load_customer_context(args.customer, clusters, vulns, occurrences)
         analyses = run_analysis(findings, customer_ctx, args.batch_size)
         if analyses:
-            json.dump(analyses, open(analysis_file, "w"), indent=2)
+            Path(analysis_file).write_text(json.dumps(analyses, indent=2))
             print(f"  Saved {len(analyses)} analyses to {analysis_file}")
 
     # Run XDR queries for each unique violation type + cluster + namespace

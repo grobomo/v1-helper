@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 def load_customer_config(customer="demo"):
     p = CUSTOMERS_DIR / f"{customer}.json"
     if p.exists():
-        return json.load(open(p))
+        return json.loads(p.read_text())
     return {"api_key_name": "v1-api/V1_API_KEY", "region": "us-east-1"}
 
 
@@ -51,7 +51,7 @@ def cmd_report(args):
 
     if args.cached and cache_path.exists():
         print(f"Loading cached V1 data from {cache_path}...")
-        data = json.load(open(cache_path))
+        data = json.loads(cache_path.read_text())
     else:
         print(f"Pulling V1 API data (customer: {args.customer}, key: {api_key})...")
         api = V1API(region, api_key)

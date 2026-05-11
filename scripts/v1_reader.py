@@ -4,15 +4,6 @@ Detects which V1 page is active, scrapes relevant data from DOM.
 """
 
 import json
-import subprocess
-
-
-def mcpm_call(server, tool, arguments=None):
-    """Call a Blueprint Extra MCP tool via mcp-manager CLI."""
-    # This would normally go through the MCP protocol.
-    # For now, we use browser_evaluate to run JS in the V1 tab.
-    # In practice, Claude Code calls these tools directly.
-    pass
 
 
 def detect_v1_page(snapshot_text):

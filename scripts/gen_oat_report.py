@@ -141,7 +141,8 @@ def main():
     if not os.path.exists(dp):
         print(f"ERROR: {dp} not found")
         sys.exit(1)
-    data = json.load(open(dp))
+    with open(dp) as f:
+        data = json.load(f)
     items, summary = parse_oat_data(data)
     if not items:
         print("No OAT items.")
