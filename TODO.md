@@ -5,8 +5,8 @@
 - [x] T-STRIP: PUBLIC REPO — Purged __pycache__/ from git history (contained Windows username paths). Verified reports/ and customers/ never committed. All PII redacted.
 
 ## Session Handoff
-T035 (PDF export), T032 (cloud-init fix), T036 (exec summary) done. 94/94 tests via `npm test`.
-Unified test runner, auto-archiving of raw data for future trends.
+T-STRIP done (git filter-repo purged __pycache__/ from 141 commits, force pushed clean history).
+Code cleanup: fixed 13 file handle leaks, removed dead code, fixed T036 test (python→python3). 90/90 tests.
 Phase 2 blocked on V1 login password (T009). T037 needs accumulated snapshots (auto-archive now in place).
 Remaining unblocked: T033/T034 (lab cluster), T037 (needs data), T038 (blocked by V1 API).
 
