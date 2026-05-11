@@ -1,5 +1,9 @@
 # v1-helper TODO
 
+## From Publishable Audit (2026-05-11)
+
+- [x] T-STRIP: PUBLIC REPO — Purged __pycache__/ from git history (contained Windows username paths). Verified reports/ and customers/ never committed. All PII redacted.
+
 ## Session Handoff
 T035 (PDF export), T032 (cloud-init fix), T036 (exec summary) done. 94/94 tests via `npm test`.
 Unified test runner, auto-archiving of raw data for future trends.
