@@ -26,7 +26,7 @@ check "shows severity breakdown" "grep -q 'critical.*high.*medium\|sev_totals' '
 check "shows cluster count" "grep -q 'cluster.*count\|len(clusters)\|len(sorted_clusters)' '$REPORT_GEN'"
 check "shows relevant CVE count" "grep -q 'relevant_count' '$REPORT_GEN'"
 check "shows action needed count" "grep -q 'need_action\|action.*count' '$REPORT_GEN'"
-check "summary inserted before Environment Context in HTML" "python -c \"import sys;t=open(sys.argv[1]).read();h1=t.find('<h1>');es=t.find('exec_summary',h1);ec=t.find('Environment Context',h1);sys.exit(0 if es>0 and ec>0 and es<ec else 1)\" '$REPORT_GEN'"
+check "summary inserted before Environment Context in HTML" "python3 -c \"import sys;t=open(sys.argv[1]).read();h1=t.find('<h1>');es=t.find('exec_summary',h1);ec=t.find('Environment Context',h1);sys.exit(0 if es>0 and ec>0 and es<ec else 1)\" '$REPORT_GEN'"
 
 echo ""
 echo "--- Executive Summary: Visual Elements ---"
