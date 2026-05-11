@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="popup-container">
         <div class="popup-header"><h1>Error</h1></div>
         <div class="popup-content">
-          <p style="color:red">Failed to initialize: ${error.message}</p>
+          <p style="color:red">Failed to initialize: ${esc(error.message)}</p>
         </div>
       </div>
     `;

@@ -21,6 +21,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 __pycache__/
+*.pyc
 
 # Archive (local only, may contain customer data)
 archive/
@@ -29,5 +30,4 @@ archive/
 SESSION_STATE.md
 .workflow-state.json
 .mcp.json
-.playwright-mcp/
 .playwright-mcp/
